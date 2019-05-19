@@ -17,7 +17,6 @@
 		922D19972291B21C00DBF67D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		922D19992291B21C00DBF67D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		922D199E2291B21C00DBF67D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		922D199F2291B21C00DBF67D /* Brightness_Sync.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Brightness_Sync.entitlements; sourceTree = "<group>"; };
 		922D19A52291B5C600DBF67D /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -54,7 +53,6 @@
 				922D19972291B21C00DBF67D /* AppDelegate.swift */,
 				922D19992291B21C00DBF67D /* Assets.xcassets */,
 				922D199E2291B21C00DBF67D /* Info.plist */,
-				922D199F2291B21C00DBF67D /* Brightness_Sync.entitlements */,
 				922D19A52291B5C600DBF67D /* main.swift */,
 			);
 			path = "Brightness Sync";
