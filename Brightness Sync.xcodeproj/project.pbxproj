@@ -9,14 +9,12 @@
 /* Begin PBXBuildFile section */
 		922D19982291B21C00DBF67D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922D19972291B21C00DBF67D /* AppDelegate.swift */; };
 		922D199A2291B21C00DBF67D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 922D19992291B21C00DBF67D /* Assets.xcassets */; };
-		922D199D2291B21C00DBF67D /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 922D199B2291B21C00DBF67D /* MainMenu.xib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		922D19942291B21C00DBF67D /* Brightness Sync.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Brightness Sync.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		922D19972291B21C00DBF67D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		922D19992291B21C00DBF67D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		922D199C2291B21C00DBF67D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		922D199E2291B21C00DBF67D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		922D199F2291B21C00DBF67D /* Brightness_Sync.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Brightness_Sync.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -53,7 +51,6 @@
 			children = (
 				922D19972291B21C00DBF67D /* AppDelegate.swift */,
 				922D19992291B21C00DBF67D /* Assets.xcassets */,
-				922D199B2291B21C00DBF67D /* MainMenu.xib */,
 				922D199E2291B21C00DBF67D /* Info.plist */,
 				922D199F2291B21C00DBF67D /* Brightness_Sync.entitlements */,
 			);
@@ -124,7 +121,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				922D199A2291B21C00DBF67D /* Assets.xcassets in Resources */,
-				922D199D2291B21C00DBF67D /* MainMenu.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -140,17 +136,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXVariantGroup section */
-		922D199B2291B21C00DBF67D /* MainMenu.xib */ = {
-			isa = PBXVariantGroup;
-			children = (
-				922D199C2291B21C00DBF67D /* Base */,
-			);
-			name = MainMenu.xib;
-			sourceTree = "<group>";
-		};
-/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		922D19A02291B21C00DBF67D /* Debug */ = {
