@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		922D19982291B21C00DBF67D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922D19972291B21C00DBF67D /* AppDelegate.swift */; };
 		922D199A2291B21C00DBF67D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 922D19992291B21C00DBF67D /* Assets.xcassets */; };
+		922D19A62291B5C600DBF67D /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922D19A52291B5C600DBF67D /* main.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -17,6 +18,7 @@
 		922D19992291B21C00DBF67D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		922D199E2291B21C00DBF67D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		922D199F2291B21C00DBF67D /* Brightness_Sync.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Brightness_Sync.entitlements; sourceTree = "<group>"; };
+		922D19A52291B5C600DBF67D /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,6 +55,7 @@
 				922D19992291B21C00DBF67D /* Assets.xcassets */,
 				922D199E2291B21C00DBF67D /* Info.plist */,
 				922D199F2291B21C00DBF67D /* Brightness_Sync.entitlements */,
+				922D19A52291B5C600DBF67D /* main.swift */,
 			);
 			path = "Brightness Sync";
 			sourceTree = "<group>";
@@ -131,6 +134,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				922D19A62291B5C600DBF67D /* main.swift in Sources */,
 				922D19982291B21C00DBF67D /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
