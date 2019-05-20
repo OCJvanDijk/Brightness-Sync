@@ -12,7 +12,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     
     var syncTimer: Timer?
-    var invokedTimerCount = 0
+    
+    var brightness = 0.0
+    var changeCount = 0
     
     static let maxDisplays: UInt32 = 8
     var mainDisplay: CGDirectDisplayID = 0
@@ -28,9 +30,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate), keyEquivalent: ""))
         statusItem.menu = menu
         
-        let timer = Timer.scheduledTimer(timeInterval: 0.2, target: self, selector: #selector(handleTimer), userInfo: nil, repeats: true)
-        timer.tolerance = 1
-        syncTimer = timer
+        refreshMonitorList()
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
@@ -42,18 +42,51 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         refreshMonitorList()
     }
     
-    @objc func handleTimer() {
-        invokedTimerCount += 1
-//        print("hoi\(invokedTimerCount)")
-//        print(CoreDisplay_Display_GetUserBrightness(0))
-    }
-    
     func refreshMonitorList() {
-        mainDisplay = CGMainDisplayID()
+        let previousCount = displayCount
         
+        mainDisplay = CGMainDisplayID()
         CGGetOnlineDisplayList(AppDelegate.maxDisplays, &onlineDisplays, &displayCount)
         
         print(mainDisplay)
         print(onlineDisplays[0...Int(displayCount)-1])
+        
+        if (displayCount > 1 && previousCount <= 1) {
+            startNewTimer()
+        }
+        else if (displayCount <= 1 && previousCount > 1) {
+            stopTimer()
+        }
+    }
+    
+    func startNewTimer() {
+        stopTimer()
+        
+        let timer = Timer.scheduledTimer(timeInterval: 0.2, target: self, selector: #selector(handleTimer), userInfo: nil, repeats: true)
+        timer.tolerance = 1
+        syncTimer = timer
+        print("started new timer")
+    }
+    
+    func stopTimer() {
+        syncTimer?.invalidate()
+    }
+    
+    @objc func handleTimer() {
+        let newBrightness = CoreDisplay_Display_GetUserBrightness(mainDisplay)
+        
+        if (abs(brightness - newBrightness) > 0.01) {
+            changeCount += 1
+            print("Brightness changed\(changeCount)")
+            for display in onlineDisplays[0...Int(displayCount)-1] {
+                if (display != mainDisplay) {
+                    CoreDisplay_Display_SetUserBrightness(display, newBrightness)
+                }
+            }
+            
+            brightness = newBrightness
+        }
+        //        print("hoi\(invokedTimerCount)")
+        //        print(CoreDisplay_Display_GetUserBrightness(0))
     }
 }

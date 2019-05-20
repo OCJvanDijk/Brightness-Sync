@@ -5,3 +5,4 @@
 #import <CoreGraphics/CoreGraphics.h>
 
 double CoreDisplay_Display_GetUserBrightness(CGDirectDisplayID display);
+void CoreDisplay_Display_SetUserBrightness(CGDirectDisplayID display, double brightness);
