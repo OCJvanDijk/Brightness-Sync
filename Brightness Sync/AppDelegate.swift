@@ -34,6 +34,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func handleTimer() {
         invokedTimerCount += 1
         print("hoi\(invokedTimerCount)")
+        print(CoreDisplay_Display_GetUserBrightness(0))
     }
 }
-
