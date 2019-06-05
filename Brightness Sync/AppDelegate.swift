@@ -9,7 +9,10 @@
 import Cocoa
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    var running = false
+    
     let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    let statusIndicator = NSMenuItem(title: "Starting", action: nil, keyEquivalent: "")
     
     var syncTimer: Timer?
     
@@ -27,6 +30,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         let menu = NSMenu()
+        menu.addItem(statusIndicator)
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate), keyEquivalent: ""))
         statusItem.menu = menu
         
@@ -43,24 +48,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func refreshMonitorList() {
-        let previousCount = displayCount
-        
         mainDisplay = CGMainDisplayID()
         CGGetOnlineDisplayList(AppDelegate.maxDisplays, &onlineDisplays, &displayCount)
         
         print(mainDisplay)
         print(onlineDisplays[0...Int(displayCount) - 1])
         
-        if displayCount > 1, previousCount <= 1 {
+        displayCount > 1 ? start() : stop()
+    }
+    
+    func start() {
+        if !running {
             startNewTimer()
+            running = true
+            statusIndicator.title = "Activated"
         }
-        else if displayCount <= 1, previousCount > 1 {
+    }
+    
+    func stop() {
+        if running {
             stopTimer()
+            running = false
+            statusIndicator.title = "Paused"
         }
     }
     
     func startNewTimer() {
-        stopTimer()
+        assert(!(syncTimer?.isValid ?? false), "Didn't invalidate previous timer.")
         
         let timer = Timer.scheduledTimer(timeInterval: 0.2, target: self, selector: #selector(handleTimer), userInfo: nil, repeats: true)
         timer.tolerance = 1
