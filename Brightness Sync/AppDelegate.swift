@@ -20,7 +20,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var mainDisplay: CGDirectDisplayID = 0
     var onlineDisplays = [CGDirectDisplayID](repeating: 0, count: Int(maxDisplays))
     var displayCount: UInt32 = 0
-
+    
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         if let button = statusItem.button {
             button.image = #imageLiteral(resourceName: "StatusBarButtonImage")
@@ -32,7 +32,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         refreshMonitorList()
     }
-
+    
     func applicationWillTerminate(_ aNotification: Notification) {
         // Insert code here to tear down your application
     }
@@ -49,12 +49,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         CGGetOnlineDisplayList(AppDelegate.maxDisplays, &onlineDisplays, &displayCount)
         
         print(mainDisplay)
-        print(onlineDisplays[0...Int(displayCount)-1])
+        print(onlineDisplays[0...Int(displayCount) - 1])
         
-        if (displayCount > 1 && previousCount <= 1) {
+        if displayCount > 1, previousCount <= 1 {
             startNewTimer()
         }
-        else if (displayCount <= 1 && previousCount > 1) {
+        else if displayCount <= 1, previousCount > 1 {
             stopTimer()
         }
     }
@@ -75,11 +75,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func handleTimer() {
         let newBrightness = CoreDisplay_Display_GetUserBrightness(mainDisplay)
         
-        if (abs(brightness - newBrightness) > 0.01) {
+        if abs(brightness - newBrightness) > 0.01 {
             changeCount += 1
             print("Brightness changed\(changeCount)")
-            for display in onlineDisplays[0...Int(displayCount)-1] {
-                if (display != mainDisplay) {
+            for display in onlineDisplays[0...Int(displayCount) - 1] {
+                if display != mainDisplay {
                     CoreDisplay_Display_SetUserBrightness(display, newBrightness)
                 }
             }
