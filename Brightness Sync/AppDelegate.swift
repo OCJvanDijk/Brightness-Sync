@@ -14,7 +14,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     var syncTimer: Timer?
     
-    var brightness = -1.0
+    var lastBrightness: Double?
+    
+    // CoreDisplay_Display_GetUserBrightness reports 1.0 for builtin display just before applicationDidChangeScreenParameters when closing lid.
+    // This is a workaround to restore the last sane value after syncing stops.
+    var lastSaneBrightness: Double?
+    var lastSaneBrightnessDelayTimer: Timer?
     
     static let maxDisplays: UInt32 = 8
     
@@ -58,12 +63,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { (_) -> Void in
                 let newBrightness = CoreDisplay_Display_GetUserBrightness(syncFrom)
                 
-                if abs(self.brightness - newBrightness) > 0.01 {
+                if abs(self.lastBrightness ?? -1 - newBrightness) > 0.01 {
                     for display in syncTo {
                         CoreDisplay_Display_SetUserBrightness(display, newBrightness)
                     }
                     
-                    self.brightness = newBrightness
+                    self.lastBrightness = newBrightness
+                    
+                    if newBrightness == 1, self.lastSaneBrightness != 1 {
+                        let timerAlreadyRunning = self.lastSaneBrightnessDelayTimer?.isValid ?? false
+                        
+                        if !timerAlreadyRunning {
+                            self.lastSaneBrightnessDelayTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { (_) -> Void in
+                                self.lastSaneBrightness = newBrightness
+                            }
+                        }
+                    } else {
+                        self.lastSaneBrightnessDelayTimer?.invalidate()
+                        self.lastSaneBrightness = newBrightness
+                    }
                 }
             }
             timer.tolerance = 1
@@ -71,6 +89,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             statusIndicator.title = "Activated"
         }
         else {
+            lastSaneBrightnessDelayTimer?.invalidate()
+            if let restoreValue = lastSaneBrightness {
+                for display in syncTo {
+                    CoreDisplay_Display_SetUserBrightness(display, restoreValue)
+                }
+                lastSaneBrightness = nil
+            }
+            
             statusIndicator.title = "Paused"
         }
     }
