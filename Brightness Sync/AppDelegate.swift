@@ -9,20 +9,15 @@
 import Cocoa
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    var running = false
-    
     let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     let statusIndicator = NSMenuItem(title: "Starting", action: nil, keyEquivalent: "")
     
     var syncTimer: Timer?
     
-    var brightness = 0.0
+    var brightness = -1.0
     var changeCount = 0
     
     static let maxDisplays: UInt32 = 8
-    var mainDisplay: CGDirectDisplayID = 0
-    var onlineDisplays = [CGDirectDisplayID](repeating: 0, count: Int(maxDisplays))
-    var displayCount: UInt32 = 0
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         if let button = statusItem.button {
@@ -35,7 +30,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate), keyEquivalent: ""))
         statusItem.menu = menu
         
-        refreshMonitorList()
+        refresh()
     }
     
     func applicationWillTerminate(_ aNotification: Notification) {
@@ -43,64 +38,75 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationDidChangeScreenParameters(_ notification: Notification) {
-        print("Params changed")
-        refreshMonitorList()
+        refresh()
     }
     
-    func refreshMonitorList() {
-        mainDisplay = CGMainDisplayID()
+    func refresh() {
+        var onlineDisplays = [CGDirectDisplayID](repeating: 0, count: Int(AppDelegate.maxDisplays))
+        var displayCount: UInt32 = 0
+        
         CGGetOnlineDisplayList(AppDelegate.maxDisplays, &onlineDisplays, &displayCount)
         
-        print(mainDisplay)
-        print(onlineDisplays[0...Int(displayCount) - 1])
+        let allDisplays = onlineDisplays[0..<Int(displayCount)]
+        let lgDisplaySerialNumbers = getConnectedUltraFineDisplaySerialNumbers()
         
-        displayCount > 1 ? start() : stop()
-    }
-    
-    func start() {
-        if !running {
-            startNewTimer()
-            running = true
+        let syncFrom = allDisplays.first { CGDisplayIsBuiltin($0) == 1 }
+        let syncTo = allDisplays.filter { lgDisplaySerialNumbers.contains(CGDisplaySerialNumber($0)) }
+        
+        print(syncFrom)
+        print(syncTo)
+        
+        syncTimer?.invalidate()
+        
+        if let from = syncFrom, !syncTo.isEmpty {
+            let timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { (_) -> Void in
+                let newBrightness = CoreDisplay_Display_GetUserBrightness(from)
+                
+                if abs(self.brightness - newBrightness) > 0.01 {
+                    self.changeCount += 1
+                    print("Brightness changed\(self.changeCount)")
+                    for display in syncTo {
+                        CoreDisplay_Display_SetUserBrightness(display, newBrightness)
+                    }
+                    
+                    self.brightness = newBrightness
+                }
+            }
+            timer.tolerance = 1
+            syncTimer = timer
             statusIndicator.title = "Activated"
         }
-    }
-    
-    func stop() {
-        if running {
-            stopTimer()
-            running = false
+        else {
             statusIndicator.title = "Paused"
         }
     }
     
-    func startNewTimer() {
-        assert(!(syncTimer?.isValid ?? false), "Didn't invalidate previous timer.")
+    func getConnectedUltraFineDisplaySerialNumbers() -> Set<uint32> {
+        var ultraFineDisplays = Set<uint32>()
         
-        let timer = Timer.scheduledTimer(timeInterval: 0.2, target: self, selector: #selector(handleTimer), userInfo: nil, repeats: true)
-        timer.tolerance = 1
-        syncTimer = timer
-        print("started new timer")
-    }
-    
-    func stopTimer() {
-        syncTimer?.invalidate()
-    }
-    
-    @objc func handleTimer() {
-        let newBrightness = CoreDisplay_Display_GetUserBrightness(mainDisplay)
+        var iterator: io_iterator_t = 0
+        guard IOServiceGetMatchingServices(kIOMasterPortDefault, IOServiceMatching("IODisplayConnect"), &iterator) == 0 else {
+            return ultraFineDisplays
+        }
         
-        if abs(brightness - newBrightness) > 0.01 {
-            changeCount += 1
-            print("Brightness changed\(changeCount)")
-            for display in onlineDisplays[0...Int(displayCount) - 1] {
-                if display != mainDisplay {
-                    CoreDisplay_Display_SetUserBrightness(display, newBrightness)
-                }
+        var display = IOIteratorNext(iterator)
+        
+        while display != 0 {
+            if let displayInfo = IODisplayCreateInfoDictionary(display, 0)?.takeRetainedValue() as NSDictionary?,
+                let displayNames = displayInfo[kDisplayProductName] as? NSDictionary,
+                let displayName = displayNames["en_US"] as? NSString,
+                displayName.contains("LG UltraFine"),
+                let serialNumber = displayInfo[kDisplaySerialNumber] as? UInt32 {
+                ultraFineDisplays.insert(serialNumber)
             }
             
-            brightness = newBrightness
+            IOObjectRelease(display)
+            
+            display = IOIteratorNext(iterator)
         }
-        //        print("hoi\(invokedTimerCount)")
-        //        print(CoreDisplay_Display_GetUserBrightness(0))
+        
+        IOObjectRelease(iterator)
+        
+        return ultraFineDisplays
     }
 }
