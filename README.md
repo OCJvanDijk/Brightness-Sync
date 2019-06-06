@@ -1,6 +1,6 @@
 #  Brightness Sync
 
-__Download:__ [here](/OCJvanDijk/Brightness-Sync/releases/latest/download/Brightness.Sync.app.zip) (signed and notarized)
+__Download:__ [here](https://github.com/OCJvanDijk/Brightness-Sync/releases/latest/download/Brightness.Sync.app.zip) (signed and notarized)
 
 This is a small menu bar app to mitigate the problem of the LG UltraFine not being able to automatically adjust brightness.
 It will poll the brightness of your builtin display and synchronize it with your LG monitors.
