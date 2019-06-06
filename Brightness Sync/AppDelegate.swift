@@ -15,7 +15,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var syncTimer: Timer?
     
     var brightness = -1.0
-    var changeCount = 0
     
     static let maxDisplays: UInt32 = 8
     
@@ -53,9 +52,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let syncFrom = allDisplays.first { CGDisplayIsBuiltin($0) == 1 }
         let syncTo = allDisplays.filter { lgDisplaySerialNumbers.contains(CGDisplaySerialNumber($0)) }
         
-        print(syncFrom)
-        print(syncTo)
-        
         syncTimer?.invalidate()
         
         if let from = syncFrom, !syncTo.isEmpty {
@@ -63,8 +59,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 let newBrightness = CoreDisplay_Display_GetUserBrightness(from)
                 
                 if abs(self.brightness - newBrightness) > 0.01 {
-                    self.changeCount += 1
-                    print("Brightness changed\(self.changeCount)")
                     for display in syncTo {
                         CoreDisplay_Display_SetUserBrightness(display, newBrightness)
                     }
