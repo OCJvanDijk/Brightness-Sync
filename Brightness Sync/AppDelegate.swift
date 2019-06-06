@@ -52,7 +52,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         CGGetOnlineDisplayList(AppDelegate.maxDisplays, &onlineDisplays, &displayCount)
         
         let allDisplays = onlineDisplays[0..<Int(displayCount)]
-        let lgDisplaySerialNumbers = getConnectedUltraFineDisplaySerialNumbers()
+        let lgDisplaySerialNumbers = AppDelegate.getConnectedUltraFineDisplaySerialNumbers()
         
         let builtin = allDisplays.first { CGDisplayIsBuiltin($0) == 1 }
         let syncTo = allDisplays.filter { lgDisplaySerialNumbers.contains(CGDisplaySerialNumber($0)) }
@@ -60,7 +60,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         syncTimer?.invalidate()
         
         if let syncFrom = builtin, !syncTo.isEmpty {
-            let timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { (_) -> Void in
+            syncTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { (_) -> Void in
                 let newBrightness = CoreDisplay_Display_GetUserBrightness(syncFrom)
                 
                 if abs(self.lastBrightness ?? -1 - newBrightness) > 0.01 {
@@ -84,11 +84,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                 }
             }
-            timer.tolerance = 1
-            syncTimer = timer
             statusIndicator.title = "Activated"
-        }
-        else {
+        } else {
             lastSaneBrightnessDelayTimer?.invalidate()
             if let restoreValue = lastSaneBrightness {
                 for display in syncTo {
@@ -101,7 +98,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    func getConnectedUltraFineDisplaySerialNumbers() -> Set<uint32> {
+    static func getConnectedUltraFineDisplaySerialNumbers() -> Set<uint32> {
         var ultraFineDisplays = Set<uint32>()
         
         var iterator: io_iterator_t = 0
