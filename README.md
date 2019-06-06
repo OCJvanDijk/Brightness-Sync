@@ -9,7 +9,7 @@ Because it uses your laptops’ ambient light sensor, this won’t work in clams
 
 I only have one 27-inch LG UltraFine display, so I could do only limited testing. Let me know if you have issues.
 
-Requires macOS 10.14.4, but could be built for earlier versions too.
+Requires (and tested on) macOS 10.14.4, but could be built for earlier versions too.
 
 ## Energy impact
 The app polls the brightness pretty aggressively, which results in a small energy impact of around 0.3-0.5 according to Activity Monitor.
