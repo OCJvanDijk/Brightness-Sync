@@ -31,6 +31,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         menu.addItem(statusIndicator)
         menu.addItem(NSMenuItem.separator())
+        
+        let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
+        menu.addItem(NSMenuItem(title: "v\(appVersion)", action: nil, keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Check For Updates", action: #selector(checkForUpdates), keyEquivalent: ""))
+        menu.addItem(NSMenuItem.separator())
+        
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate), keyEquivalent: ""))
         statusItem.menu = menu
         
@@ -125,5 +131,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         IOObjectRelease(iterator)
         
         return ultraFineDisplays
+    }
+    
+    @objc func checkForUpdates() {
+        NSWorkspace.shared.open(URL(string: "https://github.com/OCJvanDijk/Brightness-Sync/releases")!)
     }
 }
