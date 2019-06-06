@@ -49,14 +49,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let allDisplays = onlineDisplays[0..<Int(displayCount)]
         let lgDisplaySerialNumbers = getConnectedUltraFineDisplaySerialNumbers()
         
-        let syncFrom = allDisplays.first { CGDisplayIsBuiltin($0) == 1 }
+        let builtin = allDisplays.first { CGDisplayIsBuiltin($0) == 1 }
         let syncTo = allDisplays.filter { lgDisplaySerialNumbers.contains(CGDisplaySerialNumber($0)) }
         
         syncTimer?.invalidate()
         
-        if let from = syncFrom, !syncTo.isEmpty {
+        if let syncFrom = builtin, !syncTo.isEmpty {
             let timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { (_) -> Void in
-                let newBrightness = CoreDisplay_Display_GetUserBrightness(from)
+                let newBrightness = CoreDisplay_Display_GetUserBrightness(syncFrom)
                 
                 if abs(self.brightness - newBrightness) > 0.01 {
                     for display in syncTo {
