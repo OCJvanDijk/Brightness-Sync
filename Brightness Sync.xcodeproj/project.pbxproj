@@ -21,6 +21,7 @@
 		922D19A52291B5C600DBF67D /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		922D19A92291CC9300DBF67D /* Brightness Sync-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Brightness Sync-Bridging-Header.h"; sourceTree = "<group>"; };
 		922D19AD2291CD4300DBF67D /* CoreDisplay.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreDisplay.framework; path = /System/Library/Frameworks/CoreDisplay.framework; sourceTree = "<absolute>"; };
+		92B83E1622A968DF0009570E /* Brightness Sync.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Brightness Sync.entitlements"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,6 +56,7 @@
 		922D19962291B21C00DBF67D /* Brightness Sync */ = {
 			isa = PBXGroup;
 			children = (
+				92B83E1622A968DF0009570E /* Brightness Sync.entitlements */,
 				922D19972291B21C00DBF67D /* AppDelegate.swift */,
 				922D19992291B21C00DBF67D /* Assets.xcassets */,
 				922D199E2291B21C00DBF67D /* Info.plist */,
@@ -106,6 +108,9 @@
 						CreatedOnToolsVersion = 10.2.1;
 						LastSwiftMigration = 1020;
 						SystemCapabilities = {
+							com.apple.HardenedRuntime = {
+								enabled = 1;
+							};
 							com.apple.Sandbox = {
 								enabled = 0;
 							};
@@ -279,6 +284,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = 2Z5D432U62;
+				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "Brightness Sync/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -303,6 +309,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = 2Z5D432U62;
+				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "Brightness Sync/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
