@@ -7,6 +7,7 @@
 //
 
 import Cocoa
+import os
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -52,6 +53,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func refresh() {
+        os_log("Starting display refresh...")
         var onlineDisplays = [CGDirectDisplayID](repeating: 0, count: Int(AppDelegate.maxDisplays))
         var displayCount: UInt32 = 0
         
@@ -84,14 +86,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                                 self.lastSaneBrightness = newBrightness
                             }
                         }
-                    } else {
+                    }
+                    else {
                         self.lastSaneBrightnessDelayTimer?.invalidate()
                         self.lastSaneBrightness = newBrightness
                     }
                 }
             }
             statusIndicator.title = "Activated"
-        } else {
+            os_log("Running...")
+        }
+        else {
             lastSaneBrightnessDelayTimer?.invalidate()
             if let restoreValue = lastSaneBrightness {
                 for display in syncTo {
@@ -101,6 +106,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             
             statusIndicator.title = "Paused"
+            os_log("Paused...")
         }
     }
     
@@ -115,12 +121,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         var display = IOIteratorNext(iterator)
         
         while display != 0 {
-            if let displayInfo = IODisplayCreateInfoDictionary(display, 0)?.takeRetainedValue() as NSDictionary?,
+            if
+                let displayInfo = IODisplayCreateInfoDictionary(display, 0)?.takeRetainedValue() as NSDictionary?,
                 let displayNames = displayInfo[kDisplayProductName] as? NSDictionary,
-                let displayName = displayNames["en_US"] as? NSString,
-                displayName.contains("LG UltraFine"),
-                let serialNumber = displayInfo[kDisplaySerialNumber] as? UInt32 {
-                ultraFineDisplays.insert(serialNumber)
+                let displayName = displayNames["en_US"] as? NSString
+            {
+                if
+                    displayName.contains("LG UltraFine"),
+                    let serialNumber = displayInfo[kDisplaySerialNumber] as? UInt32
+                {
+                    os_log("Found compatible display: %s", displayName)
+                    ultraFineDisplays.insert(serialNumber)
+                }
+                else {
+                    os_log("Found incompatible display: %s", displayName)
+                }
+            }
+            else {
+                os_log("Display without en_US name found.")
             }
             
             IOObjectRelease(display)
