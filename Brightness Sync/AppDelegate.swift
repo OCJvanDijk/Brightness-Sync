@@ -130,11 +130,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     displayName.contains("LG UltraFine"),
                     let serialNumber = displayInfo[kDisplaySerialNumber] as? UInt32
                 {
-                    os_log("Found compatible display: %s", displayName)
+                    os_log("Found compatible display: %{public}@", displayName)
                     ultraFineDisplays.insert(serialNumber)
                 }
                 else {
-                    os_log("Found incompatible display: %s", displayName)
+                    os_log("Found incompatible display: %{public}@", displayName)
                 }
             }
             else {
