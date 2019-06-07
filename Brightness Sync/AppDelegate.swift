@@ -1,11 +1,3 @@
-//
-//  AppDelegate.swift
-//  Brightness Sync
-//
-//  Created by Onne van Dijk on 19/05/2019.
-//  Copyright © 2019 Onne van Dijk. All rights reserved.
-//
-
 import Cocoa
 import os
 
