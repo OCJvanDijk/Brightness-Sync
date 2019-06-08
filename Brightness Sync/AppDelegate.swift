@@ -63,28 +63,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             syncTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { (_) -> Void in
                 let newBrightness = CoreDisplay_Display_GetUserBrightness(syncFrom)
                 
-                if abs(self.lastBrightness ?? -1 - newBrightness) > 0.01 {
-                    for display in syncTo {
-                        CoreDisplay_Display_SetUserBrightness(display, newBrightness)
-                    }
+                if let oldBrightness = self.lastBrightness, abs(oldBrightness - newBrightness) < 0.01 {
+                    return
+                }
+                
+                for display in syncTo {
+                    CoreDisplay_Display_SetUserBrightness(display, newBrightness)
+                }
+                
+                self.lastBrightness = newBrightness
+                
+                if newBrightness == 1, self.lastSaneBrightness != 1 {
+                    let timerAlreadyRunning = self.lastSaneBrightnessDelayTimer?.isValid ?? false
                     
-                    self.lastBrightness = newBrightness
-                    
-                    if newBrightness == 1, self.lastSaneBrightness != 1 {
-                        let timerAlreadyRunning = self.lastSaneBrightnessDelayTimer?.isValid ?? false
-                        
-                        if !timerAlreadyRunning {
-                            self.lastSaneBrightnessDelayTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { (_) -> Void in
-                                self.lastSaneBrightness = newBrightness
-                            }
+                    if !timerAlreadyRunning {
+                        self.lastSaneBrightnessDelayTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { (_) -> Void in
+                            self.lastSaneBrightness = newBrightness
                         }
                     }
-                    else {
-                        self.lastSaneBrightnessDelayTimer?.invalidate()
-                        self.lastSaneBrightness = newBrightness
-                    }
+                }
+                else {
+                    self.lastSaneBrightnessDelayTimer?.invalidate()
+                    self.lastSaneBrightness = newBrightness
                 }
             }
+            
             statusIndicator.title = "Activated"
             os_log("Running...")
         }
