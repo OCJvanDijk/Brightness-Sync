@@ -89,7 +89,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             
             statusIndicator.title = "Activated"
-            os_log("Running...")
+            os_log("Activated...")
         }
         else {
             lastSaneBrightnessDelayTimer?.invalidate()
@@ -100,8 +100,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 lastSaneBrightness = nil
             }
             
-            statusIndicator.title = "Paused"
-            os_log("Paused...")
+            statusIndicator.title = "Deactivated"
+            os_log("Deactivated...")
         }
     }
     
