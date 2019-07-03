@@ -30,6 +30,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Check For Updates", action: #selector(checkForUpdates), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
         
+        let copyDiagnosticsButton = NSMenuItem(title: "Copy Diagnostics", action: #selector(copyDiagnosticsToPasteboard), keyEquivalent: "c")
+        copyDiagnosticsButton.isHidden = true
+        copyDiagnosticsButton.allowsKeyEquivalentWhenHidden = true
+        menu.addItem(copyDiagnosticsButton)
+        
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate), keyEquivalent: ""))
         statusItem.menu = menu
         
@@ -46,12 +51,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func refresh() {
         os_log("Starting display refresh...")
-        var onlineDisplays = [CGDirectDisplayID](repeating: 0, count: Int(AppDelegate.maxDisplays))
-        var displayCount: UInt32 = 0
         
-        CGGetOnlineDisplayList(AppDelegate.maxDisplays, &onlineDisplays, &displayCount)
-        
-        let allDisplays = onlineDisplays[0..<Int(displayCount)]
+        let allDisplays = AppDelegate.getAllDisplays()
         let lgDisplaySerialNumbers = AppDelegate.getConnectedUltraFineDisplaySerialNumbers()
         
         let builtin = allDisplays.first { CGDisplayIsBuiltin($0) == 1 }
@@ -105,19 +106,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
+    static func getAllDisplays() -> [CGDirectDisplayID] {
+        var onlineDisplays = [CGDirectDisplayID](repeating: 0, count: Int(maxDisplays))
+        var displayCount: UInt32 = 0
+        
+        CGGetOnlineDisplayList(maxDisplays, &onlineDisplays, &displayCount)
+        
+        return Array(onlineDisplays[0..<Int(displayCount)])
+    }
+    
     static func getConnectedUltraFineDisplaySerialNumbers() -> Set<uint32> {
         var ultraFineDisplays = Set<uint32>()
         
-        var iterator: io_iterator_t = 0
-        guard IOServiceGetMatchingServices(kIOMasterPortDefault, IOServiceMatching("IODisplayConnect"), &iterator) == 0 else {
-            return ultraFineDisplays
-        }
-        
-        var display = IOIteratorNext(iterator)
-        
-        while display != 0 {
+        for displayInfo in getDisplayInfoDictionaries() {
             if
-                let displayInfo = IODisplayCreateInfoDictionary(display, 0)?.takeRetainedValue() as NSDictionary?,
                 let displayNames = displayInfo[kDisplayProductName] as? NSDictionary,
                 let displayName = displayNames["en_US"] as? NSString
             {
@@ -135,6 +137,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             else {
                 os_log("Display without en_US name found.")
             }
+        }
+        
+        return ultraFineDisplays
+    }
+    
+    static func getDisplayInfoDictionaries() -> [NSDictionary] {
+        var diplayInfoDictionaries = [NSDictionary]()
+        
+        var iterator: io_iterator_t = 0
+        guard IOServiceGetMatchingServices(kIOMasterPortDefault, IOServiceMatching("IODisplayConnect"), &iterator) == 0 else {
+            return diplayInfoDictionaries
+        }
+        
+        var display = IOIteratorNext(iterator)
+        
+        while display != 0 {
+            if let displayInfo = IODisplayCreateInfoDictionary(display, 0)?.takeRetainedValue() as NSDictionary? {
+                diplayInfoDictionaries.append(displayInfo)
+            }
             
             IOObjectRelease(display)
             
@@ -143,7 +164,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         IOObjectRelease(iterator)
         
-        return ultraFineDisplays
+        return diplayInfoDictionaries
+    }
+    
+    @objc func copyDiagnosticsToPasteboard() {
+        let CGDisplays = AppDelegate.getAllDisplays()
+        let IODisplays = AppDelegate.getDisplayInfoDictionaries()
+        
+        let diagnostics = """
+        CGDisplayList:
+        \(CGDisplays.map {
+        ["VendorNumber": CGDisplayVendorNumber($0),
+        "ModelNumber": CGDisplayModelNumber($0),
+        "SerialNumber": CGDisplaySerialNumber($0)]
+        })
+        
+        IODisplayList:
+        \(IODisplays)
+        """
+        
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(diagnostics, forType: .string)
     }
     
     @objc func checkForUpdates() {
