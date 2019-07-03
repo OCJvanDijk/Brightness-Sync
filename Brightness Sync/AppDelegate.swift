@@ -116,14 +116,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         var display = IOIteratorNext(iterator)
         
         while display != 0 {
+            // Retrieve serial number for dislpay - this will always be set
+            let serialNumber  = CGDisplaySerialNumber(display)
+            
             if
                 let displayInfo = IODisplayCreateInfoDictionary(display, 0)?.takeRetainedValue() as NSDictionary?,
                 let displayNames = displayInfo[kDisplayProductName] as? NSDictionary,
                 let displayName = displayNames["en_US"] as? NSString
             {
                 if
-                    displayName.contains("LG UltraFine"),
-                    let serialNumber = displayInfo[kDisplaySerialNumber] as? UInt32
+                    displayName.contains("LG UltraFine")
                 {
                     os_log("Found compatible display: %{public}@", displayName)
                     ultraFineDisplays.insert(serialNumber)
