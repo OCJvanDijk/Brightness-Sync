@@ -53,10 +53,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         os_log("Starting display refresh...")
         
         let allDisplays = AppDelegate.getAllDisplays()
-        let lgDisplaySerialNumbers = AppDelegate.getConnectedUltraFineDisplaySerialNumbers()
+        let lgDisplayIdentifiers = AppDelegate.getConnectedUltraFineDisplayIdentifiers()
         
         let builtin = allDisplays.first { CGDisplayIsBuiltin($0) == 1 }
-        let syncTo = allDisplays.filter { lgDisplaySerialNumbers.contains(CGDisplaySerialNumber($0)) }
+        let syncTo = allDisplays.filter { lgDisplayIdentifiers.contains(DisplayIdentifier(vendorNumber: CGDisplayVendorNumber($0), modelNumber: CGDisplayModelNumber($0))) }
         
         syncTimer?.invalidate()
         
@@ -115,8 +115,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return Array(onlineDisplays[0..<Int(displayCount)])
     }
     
-    static func getConnectedUltraFineDisplaySerialNumbers() -> Set<uint32> {
-        var ultraFineDisplays = Set<uint32>()
+    static func getConnectedUltraFineDisplayIdentifiers() -> Set<DisplayIdentifier> {
+        var ultraFineDisplays = Set<DisplayIdentifier>()
         
         for displayInfo in getDisplayInfoDictionaries() {
             if
@@ -125,10 +125,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             {
                 if
                     displayName.contains("LG UltraFine"),
-                    let serialNumber = displayInfo[kDisplaySerialNumber] as? UInt32
+                    let vendorNumber = displayInfo[kDisplayVendorID] as? UInt32,
+                    let modelNumber = displayInfo[kDisplayProductID] as? UInt32
                 {
                     os_log("Found compatible display: %{public}@", displayName)
-                    ultraFineDisplays.insert(serialNumber)
+                    ultraFineDisplays.insert(DisplayIdentifier(vendorNumber: vendorNumber, modelNumber: modelNumber))
                 }
                 else {
                     os_log("Found incompatible display: %{public}@", displayName)
@@ -189,5 +190,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc func checkForUpdates() {
         NSWorkspace.shared.open(URL(string: "https://github.com/OCJvanDijk/Brightness-Sync/releases")!)
+    }
+    
+    struct DisplayIdentifier: Hashable {
+        let vendorNumber: UInt32
+        let modelNumber: UInt32
     }
 }
