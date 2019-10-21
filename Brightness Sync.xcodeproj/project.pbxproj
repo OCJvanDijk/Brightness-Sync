@@ -283,6 +283,7 @@
 				CODE_SIGN_IDENTITY = "Mac Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1.1.0;
 				DEVELOPMENT_TEAM = 2Z5D432U62;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "Brightness Sync/Info.plist";
@@ -291,6 +292,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.14.4;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "dev.vandijk.Brightness-Sync";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -308,6 +310,7 @@
 				CODE_SIGN_IDENTITY = "Mac Developer";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1.1.0;
 				DEVELOPMENT_TEAM = 2Z5D432U62;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "Brightness Sync/Info.plist";
@@ -316,6 +319,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.14.4;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "dev.vandijk.Brightness-Sync";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
