@@ -36,11 +36,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(statusIndicator)
         menu.addItem(NSMenuItem.separator())
 
-        menu.addItem(NSMenuItem(title: "Brightness Offset", action: nil, keyEquivalent: ""))
-        let menuItem = NSMenuItem()
-        menuItem.view = sliderView
-        menu.addItem(menuItem)
-
+        menu.addItem(NSMenuItem(title: "Brightness Offset:", action: nil, keyEquivalent: ""))
+        let menuSlider = NSMenuItem()
+        menuSlider.view = sliderView
+        menu.addItem(menuSlider)
         menu.addItem(NSMenuItem.separator())
 
         let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
@@ -224,18 +223,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private lazy var sliderView: NSView = {
-        let container = NSView(frame: NSRect(origin: CGPoint.zero, size: CGSize(width: 160, height: 28)))
+        let container = NSView(frame: NSRect(origin: CGPoint.zero, size: CGSize(width: 200, height: 30)))
 
-        let updateSel = #selector(brightnessOffsetUpdated(slider:))
-        let statusSlider = NSSlider(value: brightnessOffset, minValue: -0.5, maxValue: 0.5, target: self, action: updateSel)
-        container.addSubview(statusSlider)
-        statusSlider.translatesAutoresizingMaskIntoConstraints = false
+        let slider = NSSlider(value: brightnessOffset, minValue: -0.5, maxValue: 0.5, target: self, action: #selector(brightnessOffsetUpdated))
 
-        statusSlider.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20).isActive = true
-        statusSlider.trailingAnchor.constraint(equalTo: container.trailingAnchor).isActive = true
-        statusSlider.topAnchor.constraint(equalTo: container.topAnchor).isActive = true
-        statusSlider.bottomAnchor.constraint(equalTo: container.bottomAnchor).isActive = true
+        container.addSubview(slider)
 
+        slider.translatesAutoresizingMaskIntoConstraints = false
+        slider.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 22).isActive = true
+        slider.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12).isActive = true
+        slider.centerYAnchor.constraint(equalTo: container.centerYAnchor).isActive = true
 
         return container
     }()
