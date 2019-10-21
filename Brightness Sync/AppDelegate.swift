@@ -79,7 +79,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         syncTimer?.invalidate()
 
         if let syncFrom = builtin, !syncTo.isEmpty {
-            syncTimer = Timer(timeInterval: updateInterval, repeats: true) { (_) in
+            let timer = Timer(timeInterval: updateInterval, repeats: true) { (_) in
                 let sourceBrightness = CoreDisplay_Display_GetUserBrightness(syncFrom)
                 let newBrightness = (sourceBrightness + self.brightnessOffset).clamped(to: 0.0...1.0)
 
@@ -107,7 +107,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     self.lastSaneBrightness = newBrightness
                 }
             }
-            RunLoop.current.add(syncTimer!, forMode: .common)
+            RunLoop.current.add(timer, forMode: .common)
+            syncTimer = timer
 
             statusIndicator.title = "Activated"
             os_log("Activated...")
