@@ -23,4 +23,4 @@ The app polls the brightness pretty aggressively, which results in a small energ
 _However_ it will automatically stop the polling when no UltraFine displays are connected and because those monitors are also a power source, this effectively means it will never run when on battery power.
 
 ## Known issues
-If you enter clamshell mode by closing your lid with the monitor attached, it will go completely bright for a second before restoring to the last synchronized brightness.
+If you enter clamshell mode by closing your lid with the monitor attached, it will go completely bright for a second before restoring to the last synchronized brightness. _This seems to be fixed in macOS Catalina._
