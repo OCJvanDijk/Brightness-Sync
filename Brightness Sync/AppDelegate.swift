@@ -110,8 +110,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // CoreDisplay_Display_GetUserBrightness reports 1.0 for builtin display just before applicationDidChangeScreenParameters when closing lid.
     // This is a workaround to restore the last sane value after syncing stops.
-    var lastSaneBrightness: Double?
-    var lastSaneBrightnessDelayTimer: Timer?
+    var lastSaneSourceBrightness: Double?
+    var lastSaneSourceBrightnessDelayTimer: Timer?
 
     func refresh() {
         os_log("Starting display refresh...")
@@ -127,7 +127,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let syncFrom = builtin, !syncTo.isEmpty {
             let timer = Timer(timeInterval: updateInterval, repeats: true) { (_) in
                 let sourceBrightness = CoreDisplay_Display_GetUserBrightness(syncFrom)
-                let newBrightness = (sourceBrightness + self.brightnessOffset).clamped(to: 0.0...1.0)
+                let newBrightness = self.getAdjustedBrightness(sourceBrightness: sourceBrightness)
 
                 if let oldBrightness = self.lastBrightness, abs(oldBrightness - newBrightness) < 0.01 {
                     return
@@ -139,18 +139,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
                 self.lastBrightness = newBrightness
 
-                if newBrightness == 1, self.lastSaneBrightness != 1 {
-                    let timerAlreadyRunning = self.lastSaneBrightnessDelayTimer?.isValid ?? false
+                if sourceBrightness == 1, self.lastSaneSourceBrightness != 1 {
+                    let timerAlreadyRunning = self.lastSaneSourceBrightnessDelayTimer?.isValid ?? false
 
                     if !timerAlreadyRunning {
-                        self.lastSaneBrightnessDelayTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { (_) -> Void in
-                            self.lastSaneBrightness = newBrightness
+                        self.lastSaneSourceBrightnessDelayTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { (_) -> Void in
+                            self.lastSaneSourceBrightness = sourceBrightness
                         }
                     }
                 }
                 else {
-                    self.lastSaneBrightnessDelayTimer?.invalidate()
-                    self.lastSaneBrightness = newBrightness
+                    self.lastSaneSourceBrightnessDelayTimer?.invalidate()
+                    self.lastSaneSourceBrightness = sourceBrightness
                 }
             }
             RunLoop.current.add(timer, forMode: .common)
@@ -160,17 +160,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             os_log("Activated...")
         }
         else {
-            lastSaneBrightnessDelayTimer?.invalidate()
-            if let restoreValue = lastSaneBrightness {
+            lastSaneSourceBrightnessDelayTimer?.invalidate()
+            if let restoreValue = lastSaneSourceBrightness {
+                let newBrightness = getAdjustedBrightness(sourceBrightness: restoreValue)
                 for display in syncTo {
-                    CoreDisplay_Display_SetUserBrightness(display, restoreValue)
+                    CoreDisplay_Display_SetUserBrightness(display, newBrightness)
                 }
-                lastSaneBrightness = nil
+                lastSaneSourceBrightness = nil
             }
 
             statusIndicator.title = "Deactivated"
             os_log("Deactivated...")
         }
+    }
+
+    func getAdjustedBrightness(sourceBrightness: Double) -> Double {
+        (sourceBrightness + brightnessOffset).clamped(to: 0.0...1.0)
     }
 
     // MARK: - Displays
