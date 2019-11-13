@@ -2,30 +2,26 @@ import Cocoa
 import os
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+
+    // MARK: - Menu / App
+
     let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     let statusIndicator = NSMenuItem(title: "Starting", action: nil, keyEquivalent: "")
 
-    let updateInterval = 0.1
-    var syncTimer: Timer?
+    lazy var sliderView: NSView = {
+        let container = NSView(frame: NSRect(origin: CGPoint.zero, size: CGSize(width: 200, height: 30)))
 
-    var lastBrightness: Double?
+        let slider = NSSlider(value: brightnessOffset, minValue: -0.5, maxValue: 0.5, target: self, action: #selector(brightnessOffsetUpdated))
 
-    let brightnessOffsetKey = "BSBrightnessOffset"
-    var brightnessOffset: Double {
-        get {
-            UserDefaults.standard.double(forKey: brightnessOffsetKey)
-        }
-        set (newValue) {
-            UserDefaults.standard.set(newValue, forKey: brightnessOffsetKey)
-        }
-    }
+        container.addSubview(slider)
 
-    // CoreDisplay_Display_GetUserBrightness reports 1.0 for builtin display just before applicationDidChangeScreenParameters when closing lid.
-    // This is a workaround to restore the last sane value after syncing stops.
-    var lastSaneBrightness: Double?
-    var lastSaneBrightnessDelayTimer: Timer?
+        slider.translatesAutoresizingMaskIntoConstraints = false
+        slider.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 22).isActive = true
+        slider.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12).isActive = true
+        slider.centerYAnchor.constraint(equalTo: container.centerYAnchor).isActive = true
 
-    static let maxDisplays: UInt32 = 8
+        return container
+    }()
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         if let button = statusItem.button {
@@ -65,6 +61,57 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidChangeScreenParameters(_ notification: Notification) {
         refresh()
     }
+
+    let brightnessOffsetKey = "BSBrightnessOffset"
+    var brightnessOffset: Double {
+        get {
+            UserDefaults.standard.double(forKey: brightnessOffsetKey)
+        }
+        set (newValue) {
+            UserDefaults.standard.set(newValue, forKey: brightnessOffsetKey)
+        }
+    }
+
+    @objc func brightnessOffsetUpdated(slider: NSSlider) {
+        brightnessOffset = slider.doubleValue
+        syncTimer?.fire()
+    }
+
+    @objc func checkForUpdates() {
+        NSWorkspace.shared.open(URL(string: "https://github.com/OCJvanDijk/Brightness-Sync/releases")!)
+    }
+
+    @objc func copyDiagnosticsToPasteboard() {
+        let CGDisplays = AppDelegate.getAllDisplays()
+        let IODisplays = AppDelegate.getDisplayInfoDictionaries()
+
+        let diagnostics = """
+        CGDisplayList:
+        \(CGDisplays.map {
+        ["VendorNumber": CGDisplayVendorNumber($0),
+        "ModelNumber": CGDisplayModelNumber($0),
+        "SerialNumber": CGDisplaySerialNumber($0)]
+        })
+
+        IODisplayList:
+        \(IODisplays)
+        """
+
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(diagnostics, forType: .string)
+    }
+
+    // MARK: - Timer
+
+    let updateInterval = 0.1
+    var syncTimer: Timer?
+
+    var lastBrightness: Double?
+
+    // CoreDisplay_Display_GetUserBrightness reports 1.0 for builtin display just before applicationDidChangeScreenParameters when closing lid.
+    // This is a workaround to restore the last sane value after syncing stops.
+    var lastSaneBrightness: Double?
+    var lastSaneBrightnessDelayTimer: Timer?
 
     func refresh() {
         os_log("Starting display refresh...")
@@ -130,6 +177,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         CoreDisplay_Display_SetUserBrightness(display, adjustedBrightness)
     }
 
+    // MARK: - Displays
+
+    static let maxDisplays: UInt32 = 8
+
     static func getAllDisplays() -> [CGDirectDisplayID] {
         var onlineDisplays = [CGDirectDisplayID](repeating: 0, count: Int(maxDisplays))
         var displayCount: UInt32 = 0
@@ -192,54 +243,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return diplayInfoDictionaries
     }
 
-    @objc func copyDiagnosticsToPasteboard() {
-        let CGDisplays = AppDelegate.getAllDisplays()
-        let IODisplays = AppDelegate.getDisplayInfoDictionaries()
-
-        let diagnostics = """
-        CGDisplayList:
-        \(CGDisplays.map {
-        ["VendorNumber": CGDisplayVendorNumber($0),
-        "ModelNumber": CGDisplayModelNumber($0),
-        "SerialNumber": CGDisplaySerialNumber($0)]
-        })
-
-        IODisplayList:
-        \(IODisplays)
-        """
-
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(diagnostics, forType: .string)
-    }
-
-    @objc func checkForUpdates() {
-        NSWorkspace.shared.open(URL(string: "https://github.com/OCJvanDijk/Brightness-Sync/releases")!)
-    }
-
-    @objc func brightnessOffsetUpdated(slider: NSSlider) {
-        brightnessOffset = slider.doubleValue
-        syncTimer?.fire()
-    }
-
     struct DisplayIdentifier: Hashable {
         let vendorNumber: UInt32
         let modelNumber: UInt32
     }
-
-    private lazy var sliderView: NSView = {
-        let container = NSView(frame: NSRect(origin: CGPoint.zero, size: CGSize(width: 200, height: 30)))
-
-        let slider = NSSlider(value: brightnessOffset, minValue: -0.5, maxValue: 0.5, target: self, action: #selector(brightnessOffsetUpdated))
-
-        container.addSubview(slider)
-
-        slider.translatesAutoresizingMaskIntoConstraints = false
-        slider.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 22).isActive = true
-        slider.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12).isActive = true
-        slider.centerYAnchor.constraint(equalTo: container.centerYAnchor).isActive = true
-
-        return container
-    }()
 }
 
 extension Comparable {
