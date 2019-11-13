@@ -126,14 +126,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         if let syncFrom = builtin, !syncTo.isEmpty {
             let timer = Timer(timeInterval: updateInterval, repeats: true) { (_) in
-                let newBrightness = CoreDisplay_Display_GetUserBrightness(syncFrom)
+                let sourceBrightness = CoreDisplay_Display_GetUserBrightness(syncFrom)
+                let newBrightness = (sourceBrightness + self.brightnessOffset).clamped(to: 0.0...1.0)
 
                 if let oldBrightness = self.lastBrightness, abs(oldBrightness - newBrightness) < 0.01 {
                     return
                 }
 
                 for display in syncTo {
-                    self.setBrightness(of: display, to: newBrightness)
+                    CoreDisplay_Display_SetUserBrightness(display, newBrightness)
                 }
 
                 self.lastBrightness = newBrightness
@@ -162,7 +163,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             lastSaneBrightnessDelayTimer?.invalidate()
             if let restoreValue = lastSaneBrightness {
                 for display in syncTo {
-                    setBrightness(of: display, to: restoreValue)
+                    CoreDisplay_Display_SetUserBrightness(display, restoreValue)
                 }
                 lastSaneBrightness = nil
             }
@@ -170,11 +171,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             statusIndicator.title = "Deactivated"
             os_log("Deactivated...")
         }
-    }
-
-    func setBrightness(of display: CGDirectDisplayID, to brightness: Double) {
-        let adjustedBrightness = (brightness + brightnessOffset).clamped(to: 0.0...1.0)
-        CoreDisplay_Display_SetUserBrightness(display, adjustedBrightness)
     }
 
     // MARK: - Displays
