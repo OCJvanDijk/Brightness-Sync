@@ -9,6 +9,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     let statusIndicator = NSMenuItem(title: "Starting", action: nil, keyEquivalent: "")
 
+    let pauseButton = NSMenuItem(title: "Pause", action: #selector(togglePause), keyEquivalent: "")
+
     lazy var sliderView: NSView = {
         let container = NSView(frame: NSRect(origin: CGPoint.zero, size: CGSize(width: 200, height: 30)))
 
@@ -31,6 +33,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let menu = NSMenu()
         menu.addItem(statusIndicator)
+        menu.addItem(pauseButton)
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(NSMenuItem(title: "Brightness Offset:", action: nil, keyEquivalent: ""))
@@ -62,6 +65,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidChangeScreenParameters(_ notification: Notification) {
         refreshDisplays()
+    }
+
+    let pausedPublisher = CurrentValueSubject<Bool, Never>(false)
+    @objc func togglePause() {
+        pausedPublisher.send(!pausedPublisher.value)
+        pauseButton.title = pausedPublisher.value ? "Resume" : "Pause"
     }
 
     static let brightnessOffsetKey = "BSBrightnessOffset"
@@ -106,6 +115,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Brightness Sync
 
+    enum Status: Equatable {
+        case Deactivated
+        case Paused
+        case Running(Double)
+
+        var isRunning: Bool {
+            self != .Deactivated && self != .Paused
+        }
+    }
+
     static let updateInterval = 0.1
 
     var setBrightnessCancellable: AnyCancellable?
@@ -113,18 +132,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var brightnessCancellable: Cancellable?
 
     func setup() {
-        let sourceBrightnessPublisher = Publishers.CombineLatest(sourceDisplayPublisher, targetDisplaysPublisher)
-            .map { source, targets -> AnyPublisher<Double?, Never> in
+        let brightnessPublisher = Publishers.CombineLatest3(sourceDisplayPublisher, targetDisplaysPublisher, pausedPublisher)
+            .map { source, targets, paused -> AnyPublisher<Status, Never> in
                 // We don't want the timer running unless necessary to save energy
-                if let source = source, !targets.isEmpty {
+                if paused {
+                    return Just(.Paused).eraseToAnyPublisher()
+                } else if let source = source, !targets.isEmpty {
                     return Timer.publish(every: Self.updateInterval, on: .current, in: .common)
                         .autoconnect()
                         .map { _ in
-                            CoreDisplay_Display_GetUserBrightness(source)
+                            .Running(CoreDisplay_Display_GetUserBrightness(source))
                         }
                         .eraseToAnyPublisher()
                 } else {
-                    return Just(nil).eraseToAnyPublisher()
+                    return Just(.Deactivated).eraseToAnyPublisher()
                 }
             }
             .switchToLatest()
@@ -135,31 +156,40 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // As a result, entering clamshell mode at night might cause your external display to suddenly light up with blinding light.
         // We fix this by restoring the brightness of two seconds back after entering clamshell mode (i.e. receiving nil).
         // This is probably desirable anyway even without the quirk because closing the lid makes your screen darker.
-        let pastBrightnessPublisher = sourceBrightnessPublisher.delay(for: 2, scheduler: RunLoop.current).prepend(nil)
+        let pastBrightnessPublisher = brightnessPublisher.delay(for: 2, scheduler: RunLoop.current).prepend(.Deactivated)
 
-        setBrightnessCancellable = sourceBrightnessPublisher
+        setBrightnessCancellable = brightnessPublisher
             .withLatestFrom(pastBrightnessPublisher)
-            .flatMap { brightness, brightnessTwoSecondsAgo in
+            .flatMap { brightnessStatus, brightnessStatusTwoSecondsAgo in
                 Publishers.Sequence(
-                    sequence: brightness == nil && brightnessTwoSecondsAgo != nil ? [brightnessTwoSecondsAgo, brightness] : [brightness]
+                    sequence: brightnessStatus == .Deactivated && brightnessStatusTwoSecondsAgo.isRunning ? [brightnessStatusTwoSecondsAgo, brightnessStatus] : [brightnessStatus]
                 )
             }
             .combineLatest(brightnessOffsetPublisher, targetDisplaysPublisher)
-            .sink { brightness, brightnessOffset, targets in
-                guard let sourceBrightness = brightness else { return }
-                let adjustedBrightness = (sourceBrightness + brightnessOffset).clamped(to: 0.0...1.0)
+            .sink { brightnessStatus, brightnessOffset, targets in
+                guard case let .Running(brightness) = brightnessStatus else { return }
+                let adjustedBrightness = (brightness + brightnessOffset).clamped(to: 0.0...1.0)
 
                 for target in targets {
                     CoreDisplay_Display_SetUserBrightness(target, adjustedBrightness)
                 }
             }
 
-        setStatusCancellabble = sourceBrightnessPublisher
-            .map { $0 != nil ? "Activated" : "Deactivated" }
+        setStatusCancellabble = brightnessPublisher
+            .map {
+                switch $0 {
+                case .Deactivated:
+                    return "Deactivated"
+                case .Paused:
+                    return "Paused"
+                case .Running(_):
+                    return "Activated"
+                }
+            }
             .removeDuplicates()
             .assign(to: \.title, on: statusIndicator)
 
-        brightnessCancellable = sourceBrightnessPublisher.connect()
+        brightnessCancellable = brightnessPublisher.connect()
     }
 
     // MARK: - Displays
