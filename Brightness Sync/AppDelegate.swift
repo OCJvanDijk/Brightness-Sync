@@ -128,7 +128,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     static let updateInterval = 0.1
 
     var setBrightnessCancellable: AnyCancellable?
-    var setStatusCancellabble: AnyCancellable?
+    var setStatusIndicatorCancellabble: AnyCancellable?
     var brightnessCancellable: Cancellable?
 
     func setup() {
@@ -136,8 +136,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .map { source, targets, paused -> AnyPublisher<Status, Never> in
                 // We don't want the timer running unless necessary to save energy
                 if paused {
+                    os_log("Paused...")
                     return Just(.Paused).eraseToAnyPublisher()
                 } else if let source = source, !targets.isEmpty {
+                    os_log("Activated...")
                     return Timer.publish(every: Self.updateInterval, on: .current, in: .common)
                         .autoconnect()
                         .map { _ in
@@ -145,6 +147,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         }
                         .eraseToAnyPublisher()
                 } else {
+                    os_log("Deactivated...")
                     return Just(.Deactivated).eraseToAnyPublisher()
                 }
             }
@@ -175,7 +178,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
 
-        setStatusCancellabble = brightnessPublisher
+        setStatusIndicatorCancellabble = brightnessPublisher
             .map {
                 switch $0 {
                 case .Deactivated:
@@ -304,5 +307,5 @@ extension Publisher {
             }
         }
         .switchToLatest()
-  }
+    }
 }
