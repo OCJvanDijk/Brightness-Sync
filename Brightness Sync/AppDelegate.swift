@@ -297,12 +297,12 @@ extension Strideable where Stride: SignedInteger {
 }
 
 extension Publisher {
-  func withLatestFrom<A, P: Publisher>(
-    _ second: P
-  ) -> Publishers.SwitchToLatest<Publishers.Map<Self, (Self.Output, A)>, Publishers.Map<P, Publishers.Map<Self, (Self.Output, A)>>> where P.Output == A, P.Failure == Failure {
-    return second
-      .map { latestValue in
-        self.map { ownValue in (ownValue, latestValue) }
-      }.switchToLatest()
+    func withLatestFrom<A, P: Publisher>(_ second: P)
+        -> Publishers.SwitchToLatest<Publishers.Map<Self, (Self.Output, A)>, Publishers.Map<P, Publishers.Map<Self, (Self.Output, A)>>> where P.Output == A, P.Failure == Failure {
+        second.map { latestValue in
+                self.map { ownValue in (ownValue, latestValue)
+            }
+        }
+        .switchToLatest()
   }
 }
