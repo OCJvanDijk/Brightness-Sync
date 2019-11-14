@@ -127,9 +127,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     static let updateInterval = 0.1
 
-    var setBrightnessCancellable: AnyCancellable?
-    var setStatusIndicatorCancellabble: AnyCancellable?
-    var brightnessCancellable: Cancellable?
+    var cancelBag = Set<AnyCancellable>()
 
     func setup() {
         let brightnessPublisher = Publishers.CombineLatest3(sourceDisplayPublisher, targetDisplaysPublisher, pausedPublisher)
@@ -161,7 +159,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // This is probably desirable anyway because even without the quirk closing the lid will briefly affect brightness readings.
         let pastBrightnessPublisher = brightnessPublisher.delay(for: .seconds(2), scheduler: RunLoop.current).prepend(.Deactivated)
 
-        setBrightnessCancellable = brightnessPublisher
+        brightnessPublisher
             .withLatestFrom(pastBrightnessPublisher)
             .flatMap { brightnessStatus, brightnessStatusTwoSecondsAgo in
                 Publishers.Sequence(
@@ -177,8 +175,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     CoreDisplay_Display_SetUserBrightness(target, adjustedBrightness)
                 }
             }
+            .store(in: &cancelBag)
 
-        setStatusIndicatorCancellabble = brightnessPublisher
+        brightnessPublisher
             .map {
                 switch $0 {
                 case .Deactivated:
@@ -191,8 +190,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .removeDuplicates()
             .assign(to: \.title, on: statusIndicator)
+            .store(in: &cancelBag)
 
-        brightnessCancellable = brightnessPublisher.connect()
+        brightnessPublisher.connect().store(in: &cancelBag)
     }
 
     // MARK: - Displays
