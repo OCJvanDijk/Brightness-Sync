@@ -159,7 +159,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // As a result, entering clamshell mode at night might cause your external display to suddenly light up with blinding light.
         // We fix this by restoring the brightness of two seconds back after entering clamshell mode (i.e. receiving nil).
         // This is probably desirable anyway even without the quirk because closing the lid makes your screen darker.
-        let pastBrightnessPublisher = brightnessPublisher.delay(for: 2, scheduler: RunLoop.current).prepend(.Deactivated)
+        let pastBrightnessPublisher = brightnessPublisher.delay(for: .seconds(2), scheduler: RunLoop.current).prepend(.Deactivated)
 
         setBrightnessCancellable = brightnessPublisher
             .withLatestFrom(pastBrightnessPublisher)
