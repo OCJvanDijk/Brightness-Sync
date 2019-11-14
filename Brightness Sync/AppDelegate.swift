@@ -1,5 +1,6 @@
 import Cocoa
 import os
+import Combine
 
 class AppDelegate: NSObject, NSApplicationDelegate {
 
@@ -51,7 +52,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate), keyEquivalent: ""))
         statusItem.menu = menu
 
-        refresh()
+        refreshMonitors()
+        setup()
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
@@ -59,22 +61,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidChangeScreenParameters(_ notification: Notification) {
-        refresh()
+        refreshMonitors()
     }
 
-    let brightnessOffsetKey = "BSBrightnessOffset"
+    static let brightnessOffsetKey = "BSBrightnessOffset"
     var brightnessOffset: Double {
         get {
-            UserDefaults.standard.double(forKey: brightnessOffsetKey)
+            UserDefaults.standard.double(forKey: Self.brightnessOffsetKey)
         }
         set (newValue) {
-            UserDefaults.standard.set(newValue, forKey: brightnessOffsetKey)
+            UserDefaults.standard.set(newValue, forKey: Self.brightnessOffsetKey)
+            brightnessOffsetPublisher.send(newValue)
         }
     }
+    lazy var brightnessOffsetPublisher = CurrentValueSubject<Double, Never>(brightnessOffset)
 
     @objc func brightnessOffsetUpdated(slider: NSSlider) {
         brightnessOffset = slider.doubleValue
-        syncTimer?.fire()
     }
 
     @objc func checkForUpdates() {
@@ -101,82 +104,136 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSPasteboard.general.setString(diagnostics, forType: .string)
     }
 
-    // MARK: - Timer
+    // MARK: - Brightness
 
-    let updateInterval = 0.1
-    var syncTimer: Timer?
+    static let updateInterval = 0.1
 
-    var lastBrightness: Double?
+    var setBrightnessCancellable: AnyCancellable?
+    var setStatusCancellabble: AnyCancellable?
+    var brightnessCancellable: Cancellable?
 
-    // CoreDisplay_Display_GetUserBrightness reports 1.0 for builtin display just before applicationDidChangeScreenParameters when closing lid.
-    // This is a workaround to restore the last sane value after syncing stops.
-    var lastSaneSourceBrightness: Double?
-    var lastSaneSourceBrightnessDelayTimer: Timer?
+    func setup() {
+        let sourceBrightnessPublisher = Publishers.CombineLatest(sourceDisplayPublisher, targetDisplaysPublisher)
+            .map { displays -> AnyPublisher<Double?, Never> in
+                let (source, targets) = displays
+                print("CHANGING")
+                if let source = source, !targets.isEmpty {
+                    return Timer.publish(every: Self.updateInterval, on: .current, in: .common)
+                        .autoconnect()
+                        .map { _ in
+                            CoreDisplay_Display_GetUserBrightness(source)
+                        }
+                        .eraseToAnyPublisher()
+                } else {
+                    return Just(nil).eraseToAnyPublisher()
+                }
+            }
+            .switchToLatest()
+            .multicast(subject: PassthroughSubject())
 
-    func refresh() {
+        setBrightnessCancellable = sourceBrightnessPublisher
+            .compactMap { $0 } // Filter out nil values
+            .removeDuplicates()
+            .combineLatest(brightnessOffsetPublisher, targetDisplaysPublisher)
+            .sink {
+                let (sourceBrightness, brightnessOffset, targets) = $0
+                print(sourceBrightness)
+                let adjustedBrightness = (sourceBrightness + brightnessOffset).clamped(to: 0.0...1.0)
+
+                for target in targets {
+                    CoreDisplay_Display_SetUserBrightness(target, adjustedBrightness)
+                }
+            }
+
+        setStatusCancellabble = sourceBrightnessPublisher
+            .map { $0 != nil ? "Activated" : "Deactivated" }
+            .removeDuplicates()
+            .assign(to: \.title, on: statusIndicator)
+
+        brightnessCancellable = sourceBrightnessPublisher.connect()
+    }
+
+    let sourceDisplayPublisher: CurrentValueSubject<CGDirectDisplayID?, Never> = .init(nil)
+    let targetDisplaysPublisher: CurrentValueSubject<[CGDirectDisplayID], Never> = .init([])
+
+    func refreshMonitors() {
         os_log("Starting display refresh...")
 
         let allDisplays = AppDelegate.getAllDisplays()
         let lgDisplayIdentifiers = AppDelegate.getConnectedUltraFineDisplayIdentifiers()
 
         let builtin = allDisplays.first { CGDisplayIsBuiltin($0) == 1 }
-        let syncTo = allDisplays.filter { lgDisplayIdentifiers.contains(DisplayIdentifier(vendorNumber: CGDisplayVendorNumber($0), modelNumber: CGDisplayModelNumber($0))) }
+        let targets = allDisplays.filter { lgDisplayIdentifiers.contains(DisplayIdentifier(vendorNumber: CGDisplayVendorNumber($0), modelNumber: CGDisplayModelNumber($0))) }
 
-        syncTimer?.invalidate()
-
-        if let syncFrom = builtin, !syncTo.isEmpty {
-            let timer = Timer(timeInterval: updateInterval, repeats: true) { (_) in
-                let sourceBrightness = CoreDisplay_Display_GetUserBrightness(syncFrom)
-                let newBrightness = self.getAdjustedBrightness(sourceBrightness: sourceBrightness)
-
-                if let oldBrightness = self.lastBrightness, abs(oldBrightness - newBrightness) < 0.01 {
-                    return
-                }
-
-                for display in syncTo {
-                    CoreDisplay_Display_SetUserBrightness(display, newBrightness)
-                }
-
-                self.lastBrightness = newBrightness
-
-                if sourceBrightness == 1, self.lastSaneSourceBrightness != 1 {
-                    let timerAlreadyRunning = self.lastSaneSourceBrightnessDelayTimer?.isValid ?? false
-
-                    if !timerAlreadyRunning {
-                        self.lastSaneSourceBrightnessDelayTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { (_) -> Void in
-                            self.lastSaneSourceBrightness = sourceBrightness
-                        }
-                    }
-                }
-                else {
-                    self.lastSaneSourceBrightnessDelayTimer?.invalidate()
-                    self.lastSaneSourceBrightness = sourceBrightness
-                }
-            }
-            RunLoop.current.add(timer, forMode: .common)
-            syncTimer = timer
-
-            statusIndicator.title = "Activated"
-            os_log("Activated...")
+        if builtin != sourceDisplayPublisher.value {
+            sourceDisplayPublisher.send(builtin)
         }
-        else {
-            lastSaneSourceBrightnessDelayTimer?.invalidate()
-            if let restoreValue = lastSaneSourceBrightness {
-                let newBrightness = getAdjustedBrightness(sourceBrightness: restoreValue)
-                for display in syncTo {
-                    CoreDisplay_Display_SetUserBrightness(display, newBrightness)
-                }
-                lastSaneSourceBrightness = nil
-            }
-
-            statusIndicator.title = "Deactivated"
-            os_log("Deactivated...")
+        if targets != targetDisplaysPublisher.value {
+            targetDisplaysPublisher.send(targets)
         }
     }
 
-    func getAdjustedBrightness(sourceBrightness: Double) -> Double {
-        (sourceBrightness + brightnessOffset).clamped(to: 0.0...1.0)
-    }
+    // CoreDisplay_Display_GetUserBrightness reports 1.0 for builtin display just before applicationDidChangeScreenParameters when closing lid.
+    // This is a workaround to restore the last sane value after syncing stops.
+    var lastSaneSourceBrightness: Double?
+    var lastSaneSourceBrightnessDelayTimer: Timer?
+
+//    func refresh() {
+//        syncTimer?.invalidate()
+//
+//        if let syncFrom = builtin, !syncTo.isEmpty {
+//            let timer = Timer(timeInterval: updateInterval, repeats: true) { (_) in
+//                let sourceBrightness = CoreDisplay_Display_GetUserBrightness(syncFrom)
+//                let newBrightness = self.getAdjustedBrightness(sourceBrightness: sourceBrightness)
+//
+//                if let oldBrightness = self.lastBrightness, abs(oldBrightness - newBrightness) < 0.01 {
+//                    return
+//                }
+//
+//                for display in syncTo {
+//                    CoreDisplay_Display_SetUserBrightness(display, newBrightness)
+//                }
+//
+//                self.lastBrightness = newBrightness
+//
+//                if sourceBrightness == 1, self.lastSaneSourceBrightness != 1 {
+//                    let timerAlreadyRunning = self.lastSaneSourceBrightnessDelayTimer?.isValid ?? false
+//
+//                    if !timerAlreadyRunning {
+//                        self.lastSaneSourceBrightnessDelayTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { (_) -> Void in
+//                            self.lastSaneSourceBrightness = sourceBrightness
+//                        }
+//                    }
+//                }
+//                else {
+//                    self.lastSaneSourceBrightnessDelayTimer?.invalidate()
+//                    self.lastSaneSourceBrightness = sourceBrightness
+//                }
+//            }
+//            RunLoop.current.add(timer, forMode: .common)
+//            syncTimer = timer
+//
+//            statusIndicator.title = "Activated"
+//            os_log("Activated...")
+//        }
+//        else {
+//            lastSaneSourceBrightnessDelayTimer?.invalidate()
+//            if let restoreValue = lastSaneSourceBrightness {
+//                let newBrightness = getAdjustedBrightness(sourceBrightness: restoreValue)
+//                for display in syncTo {
+//                    CoreDisplay_Display_SetUserBrightness(display, newBrightness)
+//                }
+//                lastSaneSourceBrightness = nil
+//            }
+//
+//            statusIndicator.title = "Deactivated"
+//            os_log("Deactivated...")
+//        }
+//    }
+
+//    func getAdjustedBrightness(sourceBrightness: Double) -> Double {
+//        (sourceBrightness + brightnessOffset).clamped(to: 0.0...1.0)
+//    }
 
     // MARK: - Displays
 
