@@ -52,7 +52,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate), keyEquivalent: ""))
         statusItem.menu = menu
 
-        refreshMonitors()
+        refreshDisplays()
         setup()
     }
 
@@ -61,7 +61,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidChangeScreenParameters(_ notification: Notification) {
-        refreshMonitors()
+        refreshDisplays()
     }
 
     static let brightnessOffsetKey = "BSBrightnessOffset"
@@ -104,7 +104,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSPasteboard.general.setString(diagnostics, forType: .string)
     }
 
-    // MARK: - Brightness
+    // MARK: - Brightness Sync
 
     static let updateInterval = 0.1
 
@@ -114,9 +114,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func setup() {
         let sourceBrightnessPublisher = Publishers.CombineLatest(sourceDisplayPublisher, targetDisplaysPublisher)
-            .map { displays -> AnyPublisher<Double?, Never> in
-                let (source, targets) = displays
-                print("CHANGING")
+            .map { source, targets -> AnyPublisher<Double?, Never> in
+                // We don't want the timer running unless necessary to save energy
                 if let source = source, !targets.isEmpty {
                     return Timer.publish(every: Self.updateInterval, on: .current, in: .common)
                         .autoconnect()
@@ -129,15 +128,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
             .switchToLatest()
+            .removeDuplicates()
             .multicast(subject: PassthroughSubject())
 
+        // There is a quirk in CoreDisplay, that causes the builtin display to read a brightness value of 1.0 just before you close the lid and enter clamshell mode.
+        // As a result, entering clamshell mode at night might cause your external display to suddenly light up with blinding light.
+        // We fix this by restoring the brightness of two seconds back after entering clamshell mode (i.e. receiving nil).
+        // This is probably desirable anyway even without the quirk because closing the lid makes your screen darker.
+        let pastBrightnessPublisher = sourceBrightnessPublisher.delay(for: 2, scheduler: RunLoop.current).prepend(nil)
+
         setBrightnessCancellable = sourceBrightnessPublisher
-            .compactMap { $0 } // Filter out nil values
-            .removeDuplicates()
+            .withLatestFrom(pastBrightnessPublisher)
+            .flatMap { brightness, brightnessTwoSecondsAgo in
+                Publishers.Sequence(
+                    sequence: brightness == nil && brightnessTwoSecondsAgo != nil ? [brightnessTwoSecondsAgo, brightness] : [brightness]
+                )
+            }
             .combineLatest(brightnessOffsetPublisher, targetDisplaysPublisher)
-            .sink {
-                let (sourceBrightness, brightnessOffset, targets) = $0
-                print(sourceBrightness)
+            .sink { brightness, brightnessOffset, targets in
+                guard let sourceBrightness = brightness else { return }
                 let adjustedBrightness = (sourceBrightness + brightnessOffset).clamped(to: 0.0...1.0)
 
                 for target in targets {
@@ -153,10 +162,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         brightnessCancellable = sourceBrightnessPublisher.connect()
     }
 
+    // MARK: - Displays
+
     let sourceDisplayPublisher: CurrentValueSubject<CGDirectDisplayID?, Never> = .init(nil)
     let targetDisplaysPublisher: CurrentValueSubject<[CGDirectDisplayID], Never> = .init([])
 
-    func refreshMonitors() {
+    func refreshDisplays() {
         os_log("Starting display refresh...")
 
         let allDisplays = AppDelegate.getAllDisplays()
@@ -172,70 +183,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             targetDisplaysPublisher.send(targets)
         }
     }
-
-    // CoreDisplay_Display_GetUserBrightness reports 1.0 for builtin display just before applicationDidChangeScreenParameters when closing lid.
-    // This is a workaround to restore the last sane value after syncing stops.
-    var lastSaneSourceBrightness: Double?
-    var lastSaneSourceBrightnessDelayTimer: Timer?
-
-//    func refresh() {
-//        syncTimer?.invalidate()
-//
-//        if let syncFrom = builtin, !syncTo.isEmpty {
-//            let timer = Timer(timeInterval: updateInterval, repeats: true) { (_) in
-//                let sourceBrightness = CoreDisplay_Display_GetUserBrightness(syncFrom)
-//                let newBrightness = self.getAdjustedBrightness(sourceBrightness: sourceBrightness)
-//
-//                if let oldBrightness = self.lastBrightness, abs(oldBrightness - newBrightness) < 0.01 {
-//                    return
-//                }
-//
-//                for display in syncTo {
-//                    CoreDisplay_Display_SetUserBrightness(display, newBrightness)
-//                }
-//
-//                self.lastBrightness = newBrightness
-//
-//                if sourceBrightness == 1, self.lastSaneSourceBrightness != 1 {
-//                    let timerAlreadyRunning = self.lastSaneSourceBrightnessDelayTimer?.isValid ?? false
-//
-//                    if !timerAlreadyRunning {
-//                        self.lastSaneSourceBrightnessDelayTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: false) { (_) -> Void in
-//                            self.lastSaneSourceBrightness = sourceBrightness
-//                        }
-//                    }
-//                }
-//                else {
-//                    self.lastSaneSourceBrightnessDelayTimer?.invalidate()
-//                    self.lastSaneSourceBrightness = sourceBrightness
-//                }
-//            }
-//            RunLoop.current.add(timer, forMode: .common)
-//            syncTimer = timer
-//
-//            statusIndicator.title = "Activated"
-//            os_log("Activated...")
-//        }
-//        else {
-//            lastSaneSourceBrightnessDelayTimer?.invalidate()
-//            if let restoreValue = lastSaneSourceBrightness {
-//                let newBrightness = getAdjustedBrightness(sourceBrightness: restoreValue)
-//                for display in syncTo {
-//                    CoreDisplay_Display_SetUserBrightness(display, newBrightness)
-//                }
-//                lastSaneSourceBrightness = nil
-//            }
-//
-//            statusIndicator.title = "Deactivated"
-//            os_log("Deactivated...")
-//        }
-//    }
-
-//    func getAdjustedBrightness(sourceBrightness: Double) -> Double {
-//        (sourceBrightness + brightnessOffset).clamped(to: 0.0...1.0)
-//    }
-
-    // MARK: - Displays
 
     static let maxDisplays: UInt32 = 8
 
@@ -317,4 +264,15 @@ extension Strideable where Stride: SignedInteger {
     func clamped(to limits: CountableClosedRange<Self>) -> Self {
         return min(max(self, limits.lowerBound), limits.upperBound)
     }
+}
+
+extension Publisher {
+  func withLatestFrom<A, P: Publisher>(
+    _ second: P
+  ) -> Publishers.SwitchToLatest<Publishers.Map<Self, (Self.Output, A)>, Publishers.Map<P, Publishers.Map<Self, (Self.Output, A)>>> where P.Output == A, P.Failure == Failure {
+    return second
+      .map { latestValue in
+        self.map { ownValue in (ownValue, latestValue) }
+      }.switchToLatest()
+  }
 }
