@@ -155,10 +155,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .removeDuplicates()
             .multicast(subject: PassthroughSubject())
 
-        // There is a quirk in CoreDisplay, that causes the builtin display to read a brightness value of 1.0 just before you close the lid and enter clamshell mode.
+        // There is a quirk in CoreDisplay, that causes the builtin display to read a brightness value of 1.0 just after you closed the lid and enter clamshell mode.
         // As a result, entering clamshell mode at night might cause your external display to suddenly light up with blinding light.
-        // We fix this by restoring the brightness of two seconds back after entering clamshell mode (i.e. receiving nil).
-        // This is probably desirable anyway even without the quirk because closing the lid makes your screen darker.
+        // We fix this by restoring the brightness of two seconds back after deactivation.
+        // This is probably desirable anyway because even without the quirk closing the lid will briefly affect brightness readings.
         let pastBrightnessPublisher = brightnessPublisher.delay(for: .seconds(2), scheduler: RunLoop.current).prepend(.Deactivated)
 
         setBrightnessCancellable = brightnessPublisher
