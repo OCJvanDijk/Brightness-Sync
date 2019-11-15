@@ -163,6 +163,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .withLatestFrom(pastBrightnessPublisher)
             .flatMap { brightnessStatus, brightnessStatusTwoSecondsAgo in
                 Publishers.Sequence(
+                    // If status turns to deactivated, we "inject" the brightness of two seconds ago before the deactivation to reset the brightness.
                     sequence: brightnessStatus == .Deactivated && brightnessStatusTwoSecondsAgo.isRunning ? [brightnessStatusTwoSecondsAgo, brightnessStatus] : [brightnessStatus]
                 )
             }
@@ -303,8 +304,7 @@ extension Publisher {
     func withLatestFrom<A, P: Publisher>(_ second: P)
         -> Publishers.SwitchToLatest<Publishers.Map<Self, (Self.Output, A)>, Publishers.Map<P, Publishers.Map<Self, (Self.Output, A)>>> where P.Output == A, P.Failure == Failure {
         second.map { latestValue in
-                self.map { ownValue in (ownValue, latestValue)
-            }
+            self.map { ownValue in (ownValue, latestValue) }
         }
         .switchToLatest()
     }
