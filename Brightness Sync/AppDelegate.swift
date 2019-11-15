@@ -135,13 +135,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var cancelBag = Set<AnyCancellable>()
 
     func setup() {
-        let brightnessPublisher = Publishers.CombineLatest3(sourceDisplayPublisher, targetDisplaysPublisher, pausedPublisher)
-            .map { source, targets, paused -> AnyPublisher<Status, Never> in
+        let brightnessPublisher = sourceDisplayPublisher
+            .combineLatest(targetDisplaysPublisher.map{ !$0.isEmpty }.removeDuplicates(), pausedPublisher)
+            .map { source, hasTargets, paused -> AnyPublisher<Status, Never> in
                 // We don't want the timer running unless necessary to save energy
                 if paused {
                     os_log("Paused...")
                     return Just(.Paused).eraseToAnyPublisher()
-                } else if let source = source, !targets.isEmpty {
+                } else if let source = source, hasTargets {
                     os_log("Activated...")
                     return Timer.publish(every: Self.updateInterval, on: .current, in: .common)
                         .autoconnect()
