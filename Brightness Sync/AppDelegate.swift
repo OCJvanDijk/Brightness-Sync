@@ -118,7 +118,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     enum Status: Equatable {
         case Deactivated
         case Paused
-        case Running(Double, [CGDirectDisplayID])
+        case Running(Double)
 
         var isRunning: Bool {
             self != .Deactivated && self != .Paused
@@ -141,7 +141,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     return Timer.publish(every: Self.updateInterval, on: .current, in: .common)
                         .autoconnect()
                         .map { _ in
-                            .Running(CoreDisplay_Display_GetUserBrightness(source), targets)
+                            .Running(CoreDisplay_Display_GetUserBrightness(source))
                         }
                         .eraseToAnyPublisher()
                 } else {
@@ -166,9 +166,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     sequence: brightnessStatus == .Deactivated && brightnessStatusTwoSecondsAgo.isRunning ? [brightnessStatusTwoSecondsAgo, brightnessStatus] : [brightnessStatus]
                 )
             }
-            .combineLatest(brightnessOffsetPublisher)
-            .sink { brightnessStatus, brightnessOffset in
-                guard case let .Running(brightness, targets) = brightnessStatus else { return }
+            .combineLatest(brightnessOffsetPublisher, targetDisplaysPublisher)
+            .sink { brightnessStatus, brightnessOffset, targets in
+                guard case let .Running(brightness) = brightnessStatus else { return }
                 let adjustedBrightness = (brightness + brightnessOffset).clamped(to: 0.0...1.0)
 
                 for target in targets {
