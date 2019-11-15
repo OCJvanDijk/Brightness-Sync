@@ -141,7 +141,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     return Timer.publish(every: Self.updateInterval, on: .current, in: .common)
                         .autoconnect()
                         .map { _ in
-                            .Running(CoreDisplay_Display_GetUserBrightness(source))
+                            .Running(CoreDisplay_Display_GetLinearBrightness(source))
                         }
                         .eraseToAnyPublisher()
                 } else {
@@ -173,7 +173,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 let adjustedBrightness = (brightness + brightnessOffset).clamped(to: 0.0...1.0)
 
                 for target in targets {
-                    CoreDisplay_Display_SetUserBrightness(target, adjustedBrightness)
+                    CoreDisplay_Display_SetLinearBrightness(target, adjustedBrightness)
                 }
             }
             .store(in: &cancelBag)
