@@ -11,10 +11,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     let pauseButton = NSMenuItem(title: "Pause", action: #selector(togglePause), keyEquivalent: "")
 
+    lazy var slider = NSSlider(value: brightnessOffset, minValue: -0.5, maxValue: 0.5, target: self, action: #selector(brightnessOffsetUpdated))
     lazy var sliderView: NSView = {
         let container = NSView(frame: NSRect(origin: CGPoint.zero, size: CGSize(width: 200, height: 30)))
-
-        let slider = NSSlider(value: brightnessOffset, minValue: -0.5, maxValue: 0.5, target: self, action: #selector(brightnessOffsetUpdated))
 
         container.addSubview(slider)
 
@@ -40,6 +39,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let menuSlider = NSMenuItem()
         menuSlider.view = sliderView
         menu.addItem(menuSlider)
+        menu.addItem(NSMenuItem(title: "Reset", action: #selector(brightnessOffsetReset), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
 
         let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
@@ -73,7 +73,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         pauseButton.title = pausedPublisher.value ? "Resume" : "Pause"
     }
 
-    static let brightnessOffsetKey = "BSBrightnessOffset"
+    static let brightnessOffsetKey = "BSBrightnessOffsetNew"
     var brightnessOffset: Double {
         get {
             UserDefaults.standard.double(forKey: Self.brightnessOffsetKey)
@@ -87,6 +87,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func brightnessOffsetUpdated(slider: NSSlider) {
         brightnessOffset = slider.doubleValue
+    }
+
+    @objc func brightnessOffsetReset() {
+        brightnessOffset = 0
+        slider.doubleValue = 0
     }
 
     @objc func checkForUpdates() {
