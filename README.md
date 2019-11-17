@@ -2,6 +2,8 @@
 
 __Download:__ [here](https://github.com/OCJvanDijk/Brightness-Sync/releases/latest/download/Brightness.Sync.app.zip) (macOS Catalina required, app is signed and notarized)
 
+_The app doesn't automatically check for updates. I recommend selecting "Watch->Releases only" at the top of this page if you have a GitHub account._
+
 This is a small menu bar app to mitigate the problem of the LG UltraFine not being able to automatically adjust brightness.
 It will poll the brightness of your builtin display and synchronize it with your LG monitors.
 So you can use your MBP's ambient light sensor for all your (UltraFine) displays!
