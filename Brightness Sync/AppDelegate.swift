@@ -176,10 +176,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .combineLatest(brightnessOffsetPublisher, targetDisplaysPublisher)
             .sink { brightnessStatus, brightnessOffset, targets in
                 guard case let .Running(brightness) = brightnessStatus else { return }
-                let adjustedBrightness = (brightness + brightnessOffset).clamped(to: 0.0...1.0)
 
                 for target in targets {
-                    CoreDisplay_Display_SetLinearBrightness(target, adjustedBrightness)
+                    CoreDisplay_Display_SetLinearBrightness(target, brightness)
+
+                    if brightnessOffset != 0 {
+                        let newUserBrightness = CoreDisplay_Display_GetUserBrightness(target)
+                        let adjustedUserBrightness = (newUserBrightness + brightnessOffset).clamped(to: 0.0...1.0)
+                        CoreDisplay_Display_SetUserBrightness(target, adjustedUserBrightness)
+                    }
                 }
             }
             .store(in: &cancelBag)
