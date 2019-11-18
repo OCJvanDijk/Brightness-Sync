@@ -4,19 +4,19 @@ __Download:__ [here](https://github.com/OCJvanDijk/Brightness-Sync/releases/late
 
 _The app doesn't automatically check for updates. I recommend selecting "Watch->Releases only" at the top of this page if you have a GitHub account._
 
-This is a small menu bar app to mitigate the problem of the LG UltraFine not being able to automatically adjust brightness.
-It will poll the brightness of your builtin display and synchronize it with your LG monitors.
-So you can use your MBP's ambient light sensor for all your (UltraFine) displays!
-This also means manually adjusting the brightness of all your displays is easier, a single swipe over the brightness button on your Touch Bar will do.
+This is a small menu bar app to mitigate the problem of the first-generation LG UltraFine not being able to automatically adjust brightness.
+It will poll the brightness of your built-in display and synchronize it with your LG monitors.
+So you can use the ambient light sensor of your MBP or iMac for all your (UltraFine) displays!
+This also means manually adjusting the brightness of all your displays at once is easier, a single swipe on your Touch Bar or press on your keyboard will do.
 
 The difference between this app and some existing apps is that this app uses a private framework of macOS to control the backlight of the LG UltraFine the same way the secondary slider of your Touch Bar will do.
 Other apps might virtually darken the display with the backlight staying the same, this will greatly reduce contrast.
 
-Because it uses your laptop’s ambient light sensor, this won’t work in clamshell mode.
+Because this app relies on your Mac’s ambient light sensor, unfortunately it won't help with automatic brightness if your MacBook is in clamshell mode or you have connected your UltraFine to for example a Mac Mini.
 
 I only have one 27-inch LG UltraFine display, so I could do only limited testing. Let me know if you have issues.
 
-Requires (and tested on) macOS 10.14.4, but could be built for earlier versions too.
+Requires macOS 10.15. If you're on 10.14, you can download v1 from the releases page.
 
 You'll probably want to add the app to your Login Items.
 
