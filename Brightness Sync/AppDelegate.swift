@@ -279,7 +279,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         var display = IOIteratorNext(iterator)
 
         while display != 0 {
-            if let displayInfo = IODisplayCreateInfoDictionary(display, 0)?.takeRetainedValue() as NSDictionary? {
+            if let displayInfo = IODisplayCreateInfoDictionary(display, 0)?.takeRetainedValue() {
                 diplayInfoDictionaries.append(displayInfo)
             }
 
