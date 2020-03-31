@@ -1,8 +1,9 @@
 #  Brightness Sync
 
-__Download:__ [here](https://github.com/OCJvanDijk/Brightness-Sync/releases/latest/download/Brightness.Sync.app.zip) (macOS Catalina required, app is signed and notarized)
+__Download:__ [here](https://github.com/OCJvanDijk/Brightness-Sync/releases/latest/download/Brightness.Sync.app.zip) (macOS Catalina required, app is signed and notarized)  
+Alternatively, you can use [Homebrew Cask](https://github.com/Homebrew/homebrew-cask): `$ brew cask install brightness-sync`
 
-_The app doesn't automatically check for updates. I recommend selecting "Watch->Releases only" at the top of this page if you have a GitHub account._
+_The app doesn't automatically check for updates. If you want to stay up-to-date, I recommend selecting "Watch->Releases only" at the top of this page if you have a GitHub account, or using the Homebrew Cask installation method._
 
 This is a small menu bar app to mitigate the problem of the first-generation LG UltraFine not being able to automatically adjust brightness.
 It will poll the brightness of your built-in display and synchronize it with your LG monitors.
