@@ -10,7 +10,6 @@
 		922D19982291B21C00DBF67D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922D19972291B21C00DBF67D /* AppDelegate.swift */; };
 		922D199A2291B21C00DBF67D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 922D19992291B21C00DBF67D /* Assets.xcassets */; };
 		922D19A62291B5C600DBF67D /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922D19A52291B5C600DBF67D /* main.swift */; };
-		922F729524339AD700AF6830 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922F729424339AD700AF6830 /* AppDelegate.swift */; };
 		922F72A624339D8300AF6830 /* BrightnessSyncLauncher.app in CopyFiles */ = {isa = PBXBuildFile; fileRef = 922F729224339AD700AF6830 /* BrightnessSyncLauncher.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		927DF28E2292E6DE00C9C85F /* CoreDisplay.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 922D19AD2291CD4300DBF67D /* CoreDisplay.framework */; };
 		929E03D02433A5C300A272DE /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929E03CF2433A5C300A272DE /* main.swift */; };
@@ -48,7 +47,6 @@
 		922D19A92291CC9300DBF67D /* Brightness Sync-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Brightness Sync-Bridging-Header.h"; sourceTree = "<group>"; };
 		922D19AD2291CD4300DBF67D /* CoreDisplay.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreDisplay.framework; path = /System/Library/Frameworks/CoreDisplay.framework; sourceTree = "<absolute>"; };
 		922F729224339AD700AF6830 /* BrightnessSyncLauncher.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BrightnessSyncLauncher.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		922F729424339AD700AF6830 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		922F72A024339AD800AF6830 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		922F72A124339AD800AF6830 /* BrightnessSyncLauncher.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BrightnessSyncLauncher.entitlements; sourceTree = "<group>"; };
 		929E03CF2433A5C300A272DE /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -118,7 +116,6 @@
 			isa = PBXGroup;
 			children = (
 				922F72A124339AD800AF6830 /* BrightnessSyncLauncher.entitlements */,
-				922F729424339AD700AF6830 /* AppDelegate.swift */,
 				922F72A024339AD800AF6830 /* Info.plist */,
 				929E03CF2433A5C300A272DE /* main.swift */,
 			);
@@ -243,7 +240,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				929E03D02433A5C300A272DE /* main.swift in Sources */,
-				922F729524339AD700AF6830 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,7 +1,6 @@
 import Cocoa
 
-let app = NSApplication.shared
-let delegate = AppDelegate()
-app.delegate = delegate
+let launcherURL = Bundle.main.bundleURL
+let appURL = launcherURL.appendingPathComponent("../../../..").standardized
 
-app.run()
+NSWorkspace.shared.launchApplication(appURL.path)
