@@ -15,6 +15,16 @@
 		927DF28E2292E6DE00C9C85F /* CoreDisplay.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 922D19AD2291CD4300DBF67D /* CoreDisplay.framework */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		922F72A72433A02100AF6830 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 922D198C2291B21C00DBF67D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 922F729124339AD700AF6830;
+			remoteInfo = BrightnessSyncLauncher;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		922F72A524339D5200AF6830 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -127,6 +137,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				922F72A82433A02100AF6830 /* PBXTargetDependency */,
 			);
 			name = "Brightness Sync";
 			productName = "Brightness Sync";
@@ -233,6 +244,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		922F72A82433A02100AF6830 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 922F729124339AD700AF6830 /* BrightnessSyncLauncher */;
+			targetProxy = 922F72A72433A02100AF6830 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		922D19A02291B21C00DBF67D /* Debug */ = {
