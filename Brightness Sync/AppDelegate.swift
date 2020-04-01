@@ -1,6 +1,7 @@
 import Cocoa
 import os
 import Combine
+import ServiceManagement
 
 class AppDelegate: NSObject, NSApplicationDelegate {
 
@@ -40,6 +41,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menuSlider.view = sliderView
         menu.addItem(menuSlider)
         menu.addItem(NSMenuItem(title: "Reset", action: #selector(brightnessOffsetReset), keyEquivalent: ""))
+        menu.addItem(NSMenuItem.separator())
+
+        let launchAtLoginEnabled = (SMJobCopyDictionary(kSMDomainUserLaunchd, Self.launcherId)?.takeRetainedValue() as NSDictionary?)?["OnDemand"] as? Bool ?? false
+        launchAtLoginMenuItem.state = launchAtLoginEnabled ? .on : .off
+        menu.addItem(launchAtLoginMenuItem)
         menu.addItem(NSMenuItem.separator())
 
         let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as! String
@@ -92,6 +98,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func brightnessOffsetReset() {
         brightnessOffset = 0
         slider.doubleValue = 0
+    }
+
+    let launchAtLoginMenuItem = NSMenuItem(title: "Launch At Login", action: #selector(toggleLaunchAtLoginEnabled), keyEquivalent: "")
+    static let launcherId = "dev.vandijk.BrightnessSyncLauncher" as CFString
+    @objc func toggleLaunchAtLoginEnabled() {
+        let enable = launchAtLoginMenuItem.state == .off
+        let success = SMLoginItemSetEnabled(Self.launcherId, enable)
+        if success {
+            launchAtLoginMenuItem.state = enable ? .on : .off
+        }
     }
 
     @objc func checkForUpdates() {
