@@ -6,8 +6,8 @@ Alternatively, you can use [Homebrew Cask](https://github.com/Homebrew/homebrew-
 _The app doesn't automatically check for updates. If you want to stay up-to-date, I recommend selecting "Watch->Releases only" at the top of this page if you have a GitHub account, or using the Homebrew Cask installation method._
 
 This is a small menu bar app to mitigate the problem of the first-generation LG UltraFine not being able to automatically adjust brightness.
-It will poll the brightness of your built-in display and synchronize it with your LG monitors.
-So you can use the ambient light sensor of your MBP or iMac for all your (UltraFine) displays!
+It will poll the brightness of your built-in display and synchronize it to your LG monitors.
+This way you can use the ambient light sensor of your MBP or iMac for all your (UltraFine) displays!
 This also means manually adjusting the brightness of all your displays at once is easier, a single swipe on your Touch Bar or press on your keyboard will do.
 
 The difference between this app and some existing apps is that this app uses a private framework of macOS to control the backlight of the LG UltraFine the same way the secondary slider of your Touch Bar will do.
