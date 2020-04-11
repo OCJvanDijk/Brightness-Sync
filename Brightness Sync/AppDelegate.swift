@@ -172,7 +172,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
             .switchToLatest()
-            .removeDuplicates()
             .multicast(subject: PassthroughSubject())
 
         // There is a quirk in CoreDisplay, that causes the builtin display to read a brightness value of 1.0 just after you closed the lid and enter clamshell mode.
