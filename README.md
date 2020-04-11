@@ -20,8 +20,6 @@ I only have one 27-inch LG UltraFine display, so I could do only limited testing
 
 Requires macOS 10.15. If you're on 10.14, you can download v1 from the releases page.
 
-You'll probably want to add the app to your Login Items.
-
 ## Energy impact
 The app polls the brightness pretty aggressively, which results in a small energy impact of around 0.3-0.5 according to Activity Monitor.
 _However_ it will automatically stop the polling when no UltraFine displays are connected and because those monitors are also a power source, this effectively means it will never run when on battery power.
