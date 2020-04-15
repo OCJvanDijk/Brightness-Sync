@@ -11,20 +11,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     let pauseButton = NSMenuItem(title: "Pause", action: #selector(togglePause), keyEquivalent: "")
 
-    lazy var slider = NSSlider(value: brightnessOffset, minValue: -0.4, maxValue: 0.4, target: self, action: #selector(brightnessOffsetUpdated))
-    lazy var sliderView: NSView = {
-        let container = NSView(frame: NSRect(origin: CGPoint.zero, size: CGSize(width: 200, height: 30)))
-
-        container.addSubview(slider)
-
-        slider.translatesAutoresizingMaskIntoConstraints = false
-        slider.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 22).isActive = true
-        slider.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12).isActive = true
-        slider.centerYAnchor.constraint(equalTo: container.centerYAnchor).isActive = true
-
-        return container
-    }()
-
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         if let button = statusItem.button {
             button.image = #imageLiteral(resourceName: "StatusBarButtonImage")
@@ -35,11 +21,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(pauseButton)
         menu.addItem(NSMenuItem.separator())
 
-        menu.addItem(NSMenuItem(title: "Brightness Offset:", action: nil, keyEquivalent: ""))
-        let menuSlider = NSMenuItem()
-        menuSlider.view = sliderView
-        menu.addItem(menuSlider)
-        menu.addItem(NSMenuItem(title: "Reset", action: #selector(brightnessOffsetReset), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Reset Offsets", action: #selector(brightnessOffsetReset), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
 
         let launchAtLoginEnabled = (SMJobCopyDictionary(kSMDomainUserLaunchd, Self.launcherId)?.takeRetainedValue() as NSDictionary?)?["OnDemand"] as? Bool ?? false
@@ -76,28 +58,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func togglePause() {
         pausedPublisher.send(!pausedPublisher.value)
         pauseButton.title = pausedPublisher.value ? "Resume" : "Pause"
-    }
-
-    static let brightnessOffsetKey = "BSBrightnessOffsetNew"
-    var brightnessOffset: Double {
-        get {
-            UserDefaults.standard.double(forKey: Self.brightnessOffsetKey)
-        }
-        set(newValue) {
-            UserDefaults.standard.set(newValue, forKey: Self.brightnessOffsetKey)
-            brightnessOffsetPublisher.send(newValue)
-        }
-    }
-
-    lazy var brightnessOffsetPublisher = CurrentValueSubject<Double, Never>(brightnessOffset)
-
-    @objc func brightnessOffsetUpdated(slider: NSSlider) {
-        brightnessOffset = slider.doubleValue
-    }
-
-    @objc func brightnessOffsetReset() {
-        brightnessOffset = 0
-        slider.doubleValue = 0
     }
 
     let launchAtLoginMenuItem = NSMenuItem(title: "Launch At Login", action: #selector(toggleLaunchAtLoginEnabled), keyEquivalent: "")
@@ -149,6 +109,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     static let updateInterval = 0.1
 
     var expectedTargetUserBrightnesses = [CFUUID: Double]()
+
+    @objc func brightnessOffsetReset() {
+        UserDefaults.standard
+            .dictionaryRepresentation()
+            .keys
+            .filter { $0.starts(with: "BSBrightnessOffset_") }
+            .forEach { key in
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+
+        // Poor man's resync
+        if !pausedPublisher.value {
+            pausedPublisher.send(true)
+            pausedPublisher.send(false)
+        }
+    }
 
     var cancelBag = Set<AnyCancellable>()
 
