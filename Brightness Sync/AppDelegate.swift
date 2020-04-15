@@ -163,7 +163,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     return Timer.publish(every: Self.updateInterval, on: .current, in: .common)
                         .autoconnect()
                         .map { _ in
-                            .running(CoreDisplay_Display_GetLinearBrightness(source))
+                            .running(CoreDisplay_Display_GetLinearBrightness(CGDisplayGetDisplayIDFromUUID(source)))
                         }
                         .eraseToAnyPublisher()
                 } else {
@@ -203,7 +203,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 let adjustedEstimatedLinearBrightness = (exp(adjustedEstimatedUserBrightness * 4.6533) * 0.0079).clamped(to: 0.0...1.0)
 
                 for target in targets {
-                    CoreDisplay_Display_SetLinearBrightness(target, adjustedEstimatedLinearBrightness)
+                    CoreDisplay_Display_SetLinearBrightness(CGDisplayGetDisplayIDFromUUID(target), adjustedEstimatedLinearBrightness)
                 }
             }
             .store(in: &cancelBag)
@@ -228,8 +228,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Displays
 
-    let sourceDisplayPublisher: CurrentValueSubject<CGDirectDisplayID?, Never> = .init(nil)
-    let targetDisplaysPublisher: CurrentValueSubject<[CGDirectDisplayID], Never> = .init([])
+    let sourceDisplayPublisher: CurrentValueSubject<CFUUID?, Never> = .init(nil)
+    let targetDisplaysPublisher: CurrentValueSubject<[CFUUID], Never> = .init([])
 
     func refreshDisplays() {
         os_log("Starting display refresh...")
@@ -237,8 +237,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let allDisplays = AppDelegate.getAllDisplays()
         let lgDisplayIdentifiers = AppDelegate.getConnectedUltraFineDisplayIdentifiers()
 
-        let builtin = allDisplays.first { CGDisplayIsBuiltin($0) == 1 }
-        let targets = allDisplays.filter { lgDisplayIdentifiers.contains(DisplayIdentifier(vendorNumber: CGDisplayVendorNumber($0), modelNumber: CGDisplayModelNumber($0))) }
+        let builtin = allDisplays
+            .filter { CGDisplayIsBuiltin($0) == 1 }
+            .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
+            .first
+        let targets = allDisplays
+            .filter { lgDisplayIdentifiers.contains(DisplayIdentifier(vendorNumber: CGDisplayVendorNumber($0), modelNumber: CGDisplayModelNumber($0))) }
+            .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
 
         sourceDisplayPublisher.send(builtin)
         targetDisplaysPublisher.send(targets)
