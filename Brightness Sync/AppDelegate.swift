@@ -1,10 +1,9 @@
 import Cocoa
-import os
 import Combine
+import os
 import ServiceManagement
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-
     // MARK: - Menu / App
 
     let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -84,11 +83,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         get {
             UserDefaults.standard.double(forKey: Self.brightnessOffsetKey)
         }
-        set (newValue) {
+        set(newValue) {
             UserDefaults.standard.set(newValue, forKey: Self.brightnessOffsetKey)
             brightnessOffsetPublisher.send(newValue)
         }
     }
+
     lazy var brightnessOffsetPublisher = CurrentValueSubject<Double, Never>(brightnessOffset)
 
     @objc func brightnessOffsetUpdated(slider: NSSlider) {
@@ -121,10 +121,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let diagnostics = """
         CGDisplayList:
         \(CGDisplays.map {
-        ["VendorNumber": CGDisplayVendorNumber($0),
-        "ModelNumber": CGDisplayModelNumber($0),
-        "SerialNumber": CGDisplaySerialNumber($0)]
-        })
+            ["VendorNumber": CGDisplayVendorNumber($0),
+             "ModelNumber": CGDisplayModelNumber($0),
+             "SerialNumber": CGDisplaySerialNumber($0)]
+             })
 
         IODisplayList:
         \(IODisplays)
@@ -137,12 +137,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Brightness Sync
 
     enum Status: Equatable {
-        case Deactivated
-        case Paused
-        case Running(Double)
+        case deactivated
+        case paused
+        case running(Double)
 
         var isRunning: Bool {
-            self != .Deactivated && self != .Paused
+            self != .deactivated && self != .paused
         }
     }
 
@@ -152,23 +152,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func setup() {
         let brightnessPublisher = sourceDisplayPublisher
-            .combineLatest(targetDisplaysPublisher.map{ !$0.isEmpty }.removeDuplicates(), pausedPublisher)
+            .combineLatest(targetDisplaysPublisher.map { !$0.isEmpty }.removeDuplicates(), pausedPublisher)
             .map { source, hasTargets, paused -> AnyPublisher<Status, Never> in
                 // We don't want the timer running unless necessary to save energy
                 if paused {
                     os_log("Paused...")
-                    return Just(.Paused).eraseToAnyPublisher()
+                    return Just(.paused).eraseToAnyPublisher()
                 } else if let source = source, hasTargets {
                     os_log("Activated...")
                     return Timer.publish(every: Self.updateInterval, on: .current, in: .common)
                         .autoconnect()
                         .map { _ in
-                            .Running(CoreDisplay_Display_GetLinearBrightness(source))
+                            .running(CoreDisplay_Display_GetLinearBrightness(source))
                         }
                         .eraseToAnyPublisher()
                 } else {
                     os_log("Deactivated...")
-                    return Just(.Deactivated).eraseToAnyPublisher()
+                    return Just(.deactivated).eraseToAnyPublisher()
                 }
             }
             .switchToLatest()
@@ -178,24 +178,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // As a result, entering clamshell mode at night might cause your external display to suddenly light up with blinding light.
         // We fix this by restoring the brightness of two seconds back after deactivation.
         // This is probably desirable anyway because even without the quirk closing the lid will briefly affect brightness readings.
-        let pastBrightnessPublisher = brightnessPublisher.delay(for: .seconds(2), scheduler: RunLoop.current).prepend(.Deactivated)
+        let pastBrightnessPublisher = brightnessPublisher.delay(for: .seconds(2), scheduler: RunLoop.current).prepend(.deactivated)
 
         brightnessPublisher
             .withLatestFrom(pastBrightnessPublisher)
             .flatMap { brightnessStatus, brightnessStatusTwoSecondsAgo in
                 Publishers.Sequence(
                     // If status turns to deactivated, we "inject" the brightness of two seconds ago before the deactivation to reset the brightness.
-                    sequence: brightnessStatus == .Deactivated && brightnessStatusTwoSecondsAgo.isRunning ? [brightnessStatusTwoSecondsAgo, brightnessStatus] : [brightnessStatus]
+                    sequence: brightnessStatus == .deactivated && brightnessStatusTwoSecondsAgo.isRunning ? [brightnessStatusTwoSecondsAgo, brightnessStatus] : [brightnessStatus]
                 )
             }
             .combineLatest(brightnessOffsetPublisher, targetDisplaysPublisher)
             .sink { brightnessStatus, userBrightnessOffset, targets in
-                guard case let .Running(linearBrightness) = brightnessStatus else { return }
+                guard case let .running(linearBrightness) = brightnessStatus else { return }
 
                 // Brightness offset set by the user is naturally a "User" brightness.
                 // Ideally we would map this to "Linear" brightness exactly like CoreDisplay does, but I've been unable to reverse engineer the formula.
                 // (Probably something to do with CoreDisplay_Display_GetDynamicSliderParameters, CoreDisplay_Display_GetLuminanceCorrectionFactor etc)
-                // Instead I've curve fitted an exponential function to observed user->linear values of my own MBP which I hope is a reasonable approximation for small offset values.
+                // Instead I've curve fitted an exponential function to observed user->linear values of my own MBP's screen which I hope is a reasonable approximation for offset values.
                 // This approximation is only applied to the offset so if offset is 0 we keep the exact Linear brightness as reported by CoreDisplay.
                 let estimatedUserBrightness = log(linearBrightness / 0.0079) / 4.6533
                 let adjustedEstimatedUserBrightness = estimatedUserBrightness + userBrightnessOffset
@@ -210,11 +210,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         brightnessPublisher
             .map {
                 switch $0 {
-                case .Deactivated:
+                case .deactivated:
                     return "Deactivated"
-                case .Paused:
+                case .paused:
                     return "Paused"
-                case .Running(_):
+                case .running:
                     return "Activated"
                 }
             }
