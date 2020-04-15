@@ -172,6 +172,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
             .switchToLatest()
+            .removeDuplicates()
             .multicast(subject: PassthroughSubject())
 
         // There is a quirk in CoreDisplay, that causes the builtin display to read a brightness value of 1.0 just after you closed the lid and enter clamshell mode.
@@ -239,12 +240,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let builtin = allDisplays.first { CGDisplayIsBuiltin($0) == 1 }
         let targets = allDisplays.filter { lgDisplayIdentifiers.contains(DisplayIdentifier(vendorNumber: CGDisplayVendorNumber($0), modelNumber: CGDisplayModelNumber($0))) }
 
-        if builtin != sourceDisplayPublisher.value {
-            sourceDisplayPublisher.send(builtin)
-        }
-        if targets != targetDisplaysPublisher.value {
-            targetDisplaysPublisher.send(targets)
-        }
+        sourceDisplayPublisher.send(builtin)
+        targetDisplaysPublisher.send(targets)
     }
 
     static let maxDisplays: UInt32 = 8
