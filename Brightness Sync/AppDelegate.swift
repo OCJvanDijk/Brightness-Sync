@@ -188,6 +188,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     return
                 }
 
+                for (key, _) in self.expectedTargetUserBrightnesses {
+                    if targets[key] == nil {
+                        self.expectedTargetUserBrightnesses.removeValue(forKey: key)
+                    }
+                }
+
                 for (target, currentTargetBrightness) in targets {
                     var offset = 0.0
                     if let uuidString = CFUUIDCreateString(nil, target) {
