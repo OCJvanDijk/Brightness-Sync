@@ -139,7 +139,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     enum Status: Equatable {
         case deactivated
         case paused
-        case running(Double)
+        case running(sourceLinear: Double, targetsUser: [CFUUID: Double])
 
         var isRunning: Bool {
             self != .deactivated && self != .paused
@@ -148,22 +148,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     static let updateInterval = 0.1
 
+    var expectedTargetUserBrightnesses = [CFUUID: Double]()
+
     var cancelBag = Set<AnyCancellable>()
 
     func setup() {
         let brightnessPublisher = sourceDisplayPublisher
-            .combineLatest(targetDisplaysPublisher.map { !$0.isEmpty }.removeDuplicates(), pausedPublisher)
-            .map { source, hasTargets, paused -> AnyPublisher<Status, Never> in
+            .combineLatest(targetDisplaysPublisher, pausedPublisher)
+            .map { source, targets, paused -> AnyPublisher<Status, Never> in
                 // We don't want the timer running unless necessary to save energy
                 if paused {
                     os_log("Paused...")
                     return Just(.paused).eraseToAnyPublisher()
-                } else if let source = source, hasTargets {
+                } else if let source = source, !targets.isEmpty {
                     os_log("Activated...")
                     return Timer.publish(every: Self.updateInterval, on: .current, in: .common)
                         .autoconnect()
                         .map { _ in
-                            .running(CoreDisplay_Display_GetLinearBrightness(CGDisplayGetDisplayIDFromUUID(source)))
+                            .running(
+                                sourceLinear: CoreDisplay_Display_GetLinearBrightness(CGDisplayGetDisplayIDFromUUID(source)),
+                                targetsUser: .init(uniqueKeysWithValues: targets.map { ($0, CoreDisplay_Display_GetUserBrightness(CGDisplayGetDisplayIDFromUUID($0))) })
+                            )
                         }
                         .eraseToAnyPublisher()
                 } else {
@@ -175,35 +180,42 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .removeDuplicates()
             .multicast(subject: PassthroughSubject())
 
-        // There is a quirk in CoreDisplay, that causes the builtin display to read a brightness value of 1.0 just after you closed the lid and enter clamshell mode.
-        // As a result, entering clamshell mode at night might cause your external display to suddenly light up with blinding light.
-        // We fix this by restoring the brightness of two seconds back after deactivation.
-        // This is probably desirable anyway because even without the quirk closing the lid will briefly affect brightness readings.
-        let pastBrightnessPublisher = brightnessPublisher.delay(for: .seconds(2), scheduler: RunLoop.current).prepend(.deactivated)
-
         brightnessPublisher
-            .withLatestFrom(pastBrightnessPublisher)
-            .flatMap { brightnessStatus, brightnessStatusTwoSecondsAgo in
-                Publishers.Sequence(
-                    // If status turns to deactivated, we "inject" the brightness of two seconds ago before the deactivation to reset the brightness.
-                    sequence: brightnessStatus == .deactivated && brightnessStatusTwoSecondsAgo.isRunning ? [brightnessStatusTwoSecondsAgo, brightnessStatus] : [brightnessStatus]
-                )
-            }
-            .combineLatest(brightnessOffsetPublisher, targetDisplaysPublisher)
-            .sink { brightnessStatus, userBrightnessOffset, targets in
-                guard case let .running(linearBrightness) = brightnessStatus else { return }
+            .sink { [weak self] brightnessStatus in
+                guard let self = self else { return }
+                guard case let .running(sourceLinearBrightness, targets) = brightnessStatus else {
+                    self.expectedTargetUserBrightnesses.removeAll()
+                    return
+                }
 
-                // Brightness offset set by the user is naturally a "User" brightness.
-                // Ideally we would map this to "Linear" brightness exactly like CoreDisplay does, but I've been unable to reverse engineer the formula.
-                // (Probably something to do with CoreDisplay_Display_GetDynamicSliderParameters, CoreDisplay_Display_GetLuminanceCorrectionFactor etc)
-                // Instead I've curve fitted an exponential function to observed user->linear values of my own MBP's screen which I hope is a reasonable approximation for offset values.
-                // This approximation is only applied to the offset so if offset is 0 we keep the exact Linear brightness as reported by CoreDisplay.
-                let estimatedUserBrightness = log(linearBrightness / 0.0079) / 4.6533
-                let adjustedEstimatedUserBrightness = estimatedUserBrightness + userBrightnessOffset
-                let adjustedEstimatedLinearBrightness = (exp(adjustedEstimatedUserBrightness * 4.6533) * 0.0079).clamped(to: 0.0...1.0)
+                for (target, currentTargetBrightness) in targets {
+                    var offset = 0.0
+                    if let uuidString = CFUUIDCreateString(nil, target) {
+                        let offsetKey = "BSBrightnessOffset_\(uuidString)"
+                        offset = UserDefaults.standard.double(forKey: offsetKey)
 
-                for target in targets {
-                    CoreDisplay_Display_SetLinearBrightness(CGDisplayGetDisplayIDFromUUID(target), adjustedEstimatedLinearBrightness)
+                        if let expectedTargetBrightness = self.expectedTargetUserBrightnesses[target] {
+                            let offsetDelta = currentTargetBrightness - expectedTargetBrightness
+                            if offsetDelta != 0 {
+                                offset += offsetDelta
+                                UserDefaults.standard.set(offset, forKey: offsetKey)
+                            }
+                        }
+                    }
+
+                    // Brightness offset set by the user is naturally a "User" brightness.
+                    // Ideally we would map this to "Linear" brightness exactly like CoreDisplay does, but I've been unable to reverse engineer the formula.
+                    // (Probably something to do with CoreDisplay_Display_GetDynamicSliderParameters, CoreDisplay_Display_GetLuminanceCorrectionFactor etc)
+                    // Instead I've curve fitted an exponential function to observed user->linear values of my own MBP's screen which I hope is a reasonable approximation for offset values.
+                    // This approximation is only applied to the offset so if offset is 0 we keep the exact Linear brightness as reported by CoreDisplay.
+                    let estimatedUserBrightness = log(sourceLinearBrightness / 0.0079) / 4.6533
+                    let adjustedEstimatedUserBrightness = estimatedUserBrightness + offset
+                    let adjustedEstimatedLinearBrightness = (exp(adjustedEstimatedUserBrightness * 4.6533) * 0.0079).clamped(to: 0.0...1.0)
+
+                    let displayID = CGDisplayGetDisplayIDFromUUID(target)
+                    CoreDisplay_Display_SetLinearBrightness(displayID, adjustedEstimatedLinearBrightness)
+
+                    self.expectedTargetUserBrightnesses[target] = CoreDisplay_Display_GetUserBrightness(displayID)
                 }
             }
             .store(in: &cancelBag)
@@ -328,15 +340,5 @@ extension Comparable {
 extension Strideable where Stride: SignedInteger {
     func clamped(to limits: CountableClosedRange<Self>) -> Self {
         return min(max(self, limits.lowerBound), limits.upperBound)
-    }
-}
-
-extension Publisher {
-    func withLatestFrom<A, P: Publisher>(_ second: P)
-        -> Publishers.SwitchToLatest<Publishers.Map<Self, (Self.Output, A)>, Publishers.Map<P, Publishers.Map<Self, (Self.Output, A)>>> where P.Output == A, P.Failure == Failure {
-        second.map { latestValue in
-            self.map { ownValue in (ownValue, latestValue) }
-        }
-        .switchToLatest()
     }
 }
