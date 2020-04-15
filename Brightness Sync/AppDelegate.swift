@@ -12,7 +12,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     let pauseButton = NSMenuItem(title: "Pause", action: #selector(togglePause), keyEquivalent: "")
 
-    lazy var slider = NSSlider(value: brightnessOffset, minValue: -0.5, maxValue: 0.5, target: self, action: #selector(brightnessOffsetUpdated))
+    lazy var slider = NSSlider(value: brightnessOffset, minValue: -0.4, maxValue: 0.4, target: self, action: #selector(brightnessOffsetUpdated))
     lazy var sliderView: NSView = {
         let container = NSView(frame: NSRect(origin: CGPoint.zero, size: CGSize(width: 200, height: 30)))
 
@@ -189,17 +189,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 )
             }
             .combineLatest(brightnessOffsetPublisher, targetDisplaysPublisher)
-            .sink { brightnessStatus, brightnessOffset, targets in
-                guard case let .Running(brightness) = brightnessStatus else { return }
+            .sink { brightnessStatus, userBrightnessOffset, targets in
+                guard case let .Running(linearBrightness) = brightnessStatus else { return }
+
+                // Brightness offset set by the user is naturally a "User" brightness.
+                // Ideally we would map this to "Linear" brightness exactly like CoreDisplay does, but I've been unable to reverse engineer the formula.
+                // (Probably something to do with CoreDisplay_Display_GetDynamicSliderParameters, CoreDisplay_Display_GetLuminanceCorrectionFactor etc)
+                // Instead I've curve fitted an exponential function to observed user->linear values of my own MBP which I hope is a reasonable approximation for small offset values.
+                // This approximation is only applied to the offset so if offset is 0 we keep the exact Linear brightness as reported by CoreDisplay.
+                let estimatedUserBrightness = log(linearBrightness / 0.0079) / 4.6533
+                let adjustedEstimatedUserBrightness = estimatedUserBrightness + userBrightnessOffset
+                let adjustedEstimatedLinearBrightness = (exp(adjustedEstimatedUserBrightness * 4.6533) * 0.0079).clamped(to: 0.0...1.0)
 
                 for target in targets {
-                    CoreDisplay_Display_SetLinearBrightness(target, brightness)
-
-                    if brightnessOffset != 0 {
-                        let newUserBrightness = CoreDisplay_Display_GetUserBrightness(target)
-                        let adjustedUserBrightness = (newUserBrightness + brightnessOffset).clamped(to: 0.0...1.0)
-                        CoreDisplay_Display_SetUserBrightness(target, adjustedUserBrightness)
-                    }
+                    CoreDisplay_Display_SetLinearBrightness(target, adjustedEstimatedLinearBrightness)
                 }
             }
             .store(in: &cancelBag)
