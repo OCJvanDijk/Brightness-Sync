@@ -99,7 +99,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     enum Status: Equatable {
         case deactivated
         case paused
-        case running(sourceLinear: Double, targetsUser: [CFUUID: Double])
+        case running(sourceLinearBrightness: Double, targetUserBrightnesses: [CFUUID: Double])
 
         var isRunning: Bool {
             self != .deactivated && self != .paused
@@ -142,8 +142,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         .autoconnect()
                         .map { _ in
                             .running(
-                                sourceLinear: CoreDisplay_Display_GetLinearBrightness(CGDisplayGetDisplayIDFromUUID(source)),
-                                targetsUser: .init(uniqueKeysWithValues: targets.map { ($0, CoreDisplay_Display_GetUserBrightness(CGDisplayGetDisplayIDFromUUID($0))) })
+                                sourceLinearBrightness: CoreDisplay_Display_GetLinearBrightness(CGDisplayGetDisplayIDFromUUID(source)),
+                                targetUserBrightnesses: .init(uniqueKeysWithValues: targets.map { ($0, CoreDisplay_Display_GetUserBrightness(CGDisplayGetDisplayIDFromUUID($0))) })
                             )
                         }
                         .eraseToAnyPublisher()
