@@ -99,7 +99,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     enum Status: Equatable {
         case deactivated
         case paused
-        case running(sourceLinearBrightness: Double, targetUserBrightnesses: [CFUUID: Double])
+        case running(sourceBrightness: Double, targetBrightnesses: [CFUUID: Double])
 
         var isRunning: Bool {
             self != .deactivated && self != .paused
@@ -107,8 +107,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     static let updateInterval = 0.1
-
-    var expectedTargetUserBrightnesses = [CFUUID: Double]()
 
     @objc func brightnessOffsetReset() {
         UserDefaults.standard
@@ -142,8 +140,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         .autoconnect()
                         .map { _ in
                             .running(
-                                sourceLinearBrightness: CoreDisplay_Display_GetLinearBrightness(CGDisplayGetDisplayIDFromUUID(source)),
-                                targetUserBrightnesses: .init(uniqueKeysWithValues: targets.map { ($0, CoreDisplay_Display_GetUserBrightness(CGDisplayGetDisplayIDFromUUID($0))) })
+                                sourceBrightness: CoreDisplay_Display_GetLinearBrightness(CGDisplayGetDisplayIDFromUUID(source)),
+                                targetBrightnesses: .init(uniqueKeysWithValues: targets.map { ($0, CoreDisplay_Display_GetLinearBrightness(CGDisplayGetDisplayIDFromUUID($0))) })
                             )
                         }
                         .eraseToAnyPublisher()
@@ -157,28 +155,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .multicast(subject: PassthroughSubject())
 
         brightnessPublisher
-            .sink { [weak self] brightnessStatus in
-                guard let self = self else { return }
-                guard case let .running(sourceLinearBrightness, targets) = brightnessStatus else {
-                    self.expectedTargetUserBrightnesses.removeAll()
-                    return
-                }
+            .withPreviousValue()
+            .sink { brightnessStatus, previousBrightnessStatus in
+                guard case let .running(sourceLinearBrightness, targets) = brightnessStatus else { return }
 
-                for (key, _) in self.expectedTargetUserBrightnesses {
-                    if targets[key] == nil {
-                        self.expectedTargetUserBrightnesses.removeValue(forKey: key)
-                    }
-                }
-
-                for (target, currentTargetBrightness) in targets {
+                for (target, currentTargetLinearBrightness) in targets {
                     var offset = 0.0
                     if let uuidString = CFUUIDCreateString(nil, target) {
                         let offsetKey = "BSBrightnessOffset_\(uuidString)"
                         offset = UserDefaults.standard.double(forKey: offsetKey)
 
-                        if let expectedTargetBrightness = self.expectedTargetUserBrightnesses[target] {
-                            let offsetDelta = currentTargetBrightness - expectedTargetBrightness
-                            if offsetDelta != 0 {
+                        if case let .running(previousBrightness, previousTargets) = previousBrightnessStatus, previousTargets[target] != nil {
+                            let expectedTargetLinearBrightness = addUserOffsetToLinearBrightness(previousBrightness, offset: offset)
+
+                            if currentTargetLinearBrightness != expectedTargetLinearBrightness {
+                                let currentTargetUserBrightness = estimatedLinearToUserBrightness(currentTargetLinearBrightness)
+                                let expectedTargetUserBrightness = estimatedLinearToUserBrightness(expectedTargetLinearBrightness)
+                                let offsetDelta = currentTargetUserBrightness - expectedTargetUserBrightness
                                 offset += offsetDelta
                                 UserDefaults.standard.set(offset, forKey: offsetKey)
                             }
@@ -190,14 +183,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     // (Probably something to do with CoreDisplay_Display_GetDynamicSliderParameters, CoreDisplay_Display_GetLuminanceCorrectionFactor etc)
                     // Instead I've curve fitted an exponential function to observed user->linear values of my own MBP's screen which I hope is a reasonable approximation for offset values.
                     // This approximation is only applied to the offset so if offset is 0 we keep the exact Linear brightness as reported by CoreDisplay.
-                    let estimatedUserBrightness = log(sourceLinearBrightness / 0.0079) / 4.6533
-                    let adjustedEstimatedUserBrightness = estimatedUserBrightness + offset
-                    let adjustedEstimatedLinearBrightness = (exp(adjustedEstimatedUserBrightness * 4.6533) * 0.0079).clamped(to: 0.0...1.0)
+                    let adjustedEstimatedLinearBrightness = addUserOffsetToLinearBrightness(sourceLinearBrightness, offset: offset)
 
                     let displayID = CGDisplayGetDisplayIDFromUUID(target)
                     CoreDisplay_Display_SetLinearBrightness(displayID, adjustedEstimatedLinearBrightness)
-
-                    self.expectedTargetUserBrightnesses[target] = CoreDisplay_Display_GetUserBrightness(displayID)
                 }
             }
             .store(in: &cancelBag)
@@ -313,6 +302,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+func addUserOffsetToLinearBrightness(_ brightness: Double, offset: Double) -> Double {
+    estimatedUserToLinearBrightness(estimatedLinearToUserBrightness(brightness) + offset).clamped(to: 0.0...1.0)
+}
+
+func estimatedLinearToUserBrightness(_ brightness: Double) -> Double {
+    log(brightness / 0.0079) / 4.6533
+}
+
+func estimatedUserToLinearBrightness(_ brightness: Double) -> Double {
+    exp(brightness * 4.6533) * 0.0079
+}
+
 extension Comparable {
     func clamped(to limits: ClosedRange<Self>) -> Self {
         return min(max(self, limits.lowerBound), limits.upperBound)
@@ -322,5 +323,15 @@ extension Comparable {
 extension Strideable where Stride: SignedInteger {
     func clamped(to limits: CountableClosedRange<Self>) -> Self {
         return min(max(self, limits.lowerBound), limits.upperBound)
+    }
+}
+
+extension Publisher {
+    func withPreviousValue() -> Publishers.Map<Publishers.Scan<Self, (Self.Output?, Self.Output?)>, (Self.Output, Self.Output?)> {
+        scan((nil, nil)) {
+            ($1, $0.0)
+        }.map {
+            ($0.0!, $0.1)
+        }
     }
 }
