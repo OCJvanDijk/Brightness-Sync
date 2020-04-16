@@ -358,7 +358,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2.1.1;
+				CURRENT_PROJECT_VERSION = "2.2.0-beta.1";
 				DEVELOPMENT_TEAM = 7M6D294GQ9;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "Brightness Sync/Info.plist";
@@ -366,7 +366,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 2.1.1;
+				MARKETING_VERSION = "2.2.0-beta.1";
 				PRODUCT_BUNDLE_IDENTIFIER = "dev.vandijk.Brightness-Sync";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -384,7 +384,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2.1.1;
+				CURRENT_PROJECT_VERSION = "2.2.0-beta.1";
 				DEVELOPMENT_TEAM = 7M6D294GQ9;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "Brightness Sync/Info.plist";
@@ -392,7 +392,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 2.1.1;
+				MARKETING_VERSION = "2.2.0-beta.1";
 				PRODUCT_BUNDLE_IDENTIFIER = "dev.vandijk.Brightness-Sync";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
