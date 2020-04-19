@@ -102,10 +102,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let diagnostics = """
         CGDisplayList:
         \(CGDisplays.map {
-            ["VendorNumber": CGDisplayVendorNumber($0),
-             "ModelNumber": CGDisplayModelNumber($0),
-             "SerialNumber": CGDisplaySerialNumber($0)]
-             })
+                    ["VendorNumber": CGDisplayVendorNumber($0),
+                                   "ModelNumber": CGDisplayModelNumber($0),
+                                   "SerialNumber": CGDisplaySerialNumber($0)]
+                       })
 
         IODisplayList:
         \(IODisplays)
@@ -118,13 +118,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Brightness Sync
 
     enum Status: Equatable {
-        case deactivated
+        case noTargets
+        case lidClosed
         case paused
         case running(sourceBrightness: Double, targets: [Target])
-
-        var isRunning: Bool {
-            self != .deactivated && self != .paused
-        }
     }
 
     struct Target: Equatable {
@@ -138,7 +135,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var cancelBag = Set<AnyCancellable>()
 
     func setup() {
-        let brightnessPublisher = sourceDisplayPublisher
+        let statusPublisher = sourceDisplayPublisher
             .combineLatest(targetDisplaysPublisher, pausedPublisher)
             .map { [monitorOffsets] source, targets, paused -> AnyPublisher<Status, Never> in
                 // We don't want the timer running unless necessary to save energy
@@ -162,16 +159,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                             )
                         }
                         .eraseToAnyPublisher()
-                } else {
+                } else if source == nil {
                     os_log("Deactivated...")
-                    return Just(.deactivated).eraseToAnyPublisher()
+                    return Just(.lidClosed).eraseToAnyPublisher()
+                } else {
+                    return Just(.noTargets).eraseToAnyPublisher()
                 }
             }
             .switchToLatest()
             .removeDuplicates()
             .multicast(subject: PassthroughSubject())
 
-        brightnessPublisher
+        // There is a quirk in CoreDisplay, that causes it to read incorrect values just before you close the lid and enter clamshell mode.
+        // This causes different kinds of problems, so we roll back to two seconds ago.
+        // This is probably desirable anyway because even without the quirk closing the lid will briefly affect brightness readings.
+        let pastStatusPublisher = statusPublisher.delay(for: .seconds(2), scheduler: RunLoop.current).prepend(.noTargets)
+        let rollbackInjector = statusPublisher.withLatestFrom(pastStatusPublisher)
+            .compactMap { brightnessStatus, brightnessStatusTwoSecondsAgo -> [Target]? in
+                if brightnessStatus == .lidClosed, case let .running(_, targets) = brightnessStatusTwoSecondsAgo {
+                    return targets
+                } else {
+                    return nil
+                }
+            }
+
+        statusPublisher
             .scan(nil) { previouslySynced, newStatus -> [Target]? in
                 guard case let .running(sourceBrightness, targets) = newStatus else { return nil }
 
@@ -194,6 +206,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
             .compactMap { $0 }
+            .merge(with: rollbackInjector)
             .sink { [monitorOffsets] targets in
                 for target in targets {
                     CoreDisplay_Display_SetLinearBrightness(CGDisplayGetDisplayIDFromUUID(target.id), target.brightness)
@@ -202,10 +215,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancelBag)
 
-        brightnessPublisher
+        statusPublisher
             .map {
                 switch $0 {
-                case .deactivated:
+                case .lidClosed, .noTargets:
                     return "Deactivated"
                 case .paused:
                     return "Paused"
@@ -217,7 +230,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .assign(to: \.title, on: statusIndicator)
             .store(in: &cancelBag)
 
-        brightnessPublisher.connect().store(in: &cancelBag)
+        statusPublisher.connect().store(in: &cancelBag)
     }
 
     // MARK: - Displays
@@ -336,5 +349,15 @@ func estimatedUserToLinearBrightness(_ brightness: Double) -> Double {
 extension Comparable {
     func clamped(to limits: ClosedRange<Self>) -> Self {
         return min(max(self, limits.lowerBound), limits.upperBound)
+    }
+}
+
+extension Publisher {
+    func withLatestFrom<A, P: Publisher>(_ second: P)
+        -> Publishers.SwitchToLatest<Publishers.Map<Self, (Self.Output, A)>, Publishers.Map<P, Publishers.Map<Self, (Self.Output, A)>>> where P.Output == A, P.Failure == Failure {
+        second.map { latestValue in
+            self.map { ownValue in (ownValue, latestValue) }
+        }
+        .switchToLatest()
     }
 }
