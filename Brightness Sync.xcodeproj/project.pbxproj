@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		921AF06C24487F1700E8BE48 /* SlidersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 921AF06B24487F1700E8BE48 /* SlidersView.swift */; };
 		922D19982291B21C00DBF67D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922D19972291B21C00DBF67D /* AppDelegate.swift */; };
 		922D199A2291B21C00DBF67D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 922D19992291B21C00DBF67D /* Assets.xcassets */; };
 		922D19A62291B5C600DBF67D /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922D19A52291B5C600DBF67D /* main.swift */; };
@@ -29,6 +30,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		921AF06B24487F1700E8BE48 /* SlidersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlidersView.swift; sourceTree = "<group>"; };
 		922D19942291B21C00DBF67D /* Brightness Sync.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Brightness Sync.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		922D19972291B21C00DBF67D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		922D19992291B21C00DBF67D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -86,6 +88,7 @@
 			children = (
 				92B83E1622A968DF0009570E /* Brightness Sync.entitlements */,
 				922D19972291B21C00DBF67D /* AppDelegate.swift */,
+				921AF06B24487F1700E8BE48 /* SlidersView.swift */,
 				922D19992291B21C00DBF67D /* Assets.xcassets */,
 				922D199E2291B21C00DBF67D /* Info.plist */,
 				922D19A52291B5C600DBF67D /* main.swift */,
@@ -219,6 +222,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				921AF06C24487F1700E8BE48 /* SlidersView.swift in Sources */,
 				922D19A62291B5C600DBF67D /* main.swift in Sources */,
 				922D19982291B21C00DBF67D /* AppDelegate.swift in Sources */,
 			);
@@ -355,7 +359,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = "2.2.0-beta.1";
@@ -381,7 +385,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = "2.2.0-beta.1";
@@ -406,7 +410,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = BrightnessSyncLauncher/BrightnessSyncLauncher.entitlements;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -431,7 +435,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = BrightnessSyncLauncher/BrightnessSyncLauncher.entitlements;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
