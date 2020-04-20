@@ -5,6 +5,8 @@ Alternatively, you can use [Homebrew Cask](https://github.com/Homebrew/homebrew-
 
 _The app doesn't automatically check for updates. If you want to stay up-to-date, I recommend selecting "Watch->Releases only" at the top of this page if you have a GitHub account, or using the Homebrew Cask installation method._
 
+If you are interested in fine tuning the relative brightness between your displays, check out the [beta version](https://github.com/OCJvanDijk/Brightness-Sync/releases/tag/v2.2.0-beta.1).
+
 ## About
 This is a small menu bar app to mitigate the problem of the first-generation LG UltraFine not being able to automatically adjust brightness.
 It will poll the brightness of your built-in display and synchronize it to your LG monitors.
