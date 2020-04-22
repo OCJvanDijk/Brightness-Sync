@@ -53,8 +53,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate), keyEquivalent: ""))
         statusItem.menu = menu
 
-        refreshDisplays()
         setup()
+        refreshDisplays()
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
@@ -118,8 +118,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Brightness Sync
 
     enum Status: Equatable {
-        case noTargets
-        case lidClosed
+        case deactivated
         case paused
         case running(sourceBrightness: Double, targets: [Target])
     }
@@ -159,24 +158,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                             )
                         }
                         .eraseToAnyPublisher()
-                } else if displays.source == nil {
-                    os_log("Deactivated...")
-                    return Just(.lidClosed).eraseToAnyPublisher()
                 } else {
-                    return Just(.noTargets).eraseToAnyPublisher()
+                    os_log("Deactivated...")
+                    return Just(.deactivated).eraseToAnyPublisher()
                 }
             }
             .switchToLatest()
             .removeDuplicates()
             .multicast(subject: PassthroughSubject())
 
-        // There is a quirk in CoreDisplay, that causes it to read incorrect values just before you close the lid and enter clamshell mode.
+        // There is a quirk in CoreDisplay, that causes it to read incorrect values just before you close the lid and enter clamshell mode or disconnect a monitor.
         // This causes different kinds of problems, so we roll back to two seconds ago.
         // This is probably desirable anyway because even without the quirk closing the lid will briefly affect brightness readings.
-        let pastStatusPublisher = statusPublisher.delay(for: .seconds(2), scheduler: RunLoop.current).prepend(.noTargets)
-        let rollbackInjector = statusPublisher.withLatestFrom(pastStatusPublisher)
+        let pastStatusPublisher = statusPublisher
+            .delay(for: .seconds(2), scheduler: RunLoop.current)
+            .prepend(.deactivated)
+        let rollbackInjector = statusPublisher
+            .withLatestFrom(pastStatusPublisher)
             .compactMap { brightnessStatus, brightnessStatusTwoSecondsAgo -> [Target]? in
-                if brightnessStatus == .lidClosed, case let .running(_, targets) = brightnessStatusTwoSecondsAgo {
+                if brightnessStatus == .deactivated, case let .running(_, targets) = brightnessStatusTwoSecondsAgo {
                     return targets
                 } else {
                     return nil
@@ -218,7 +218,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusPublisher
             .map {
                 switch $0 {
-                case .lidClosed, .noTargets:
+                case .deactivated:
                     return "Deactivated"
                 case .paused:
                     return "Paused"
@@ -235,10 +235,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Displays
 
-    let displaysPublisher: CurrentValueSubject<(source: CFUUID?, targets: [CFUUID]), Never> = .init((nil, []))
+    let displaysPublisher: PassthroughSubject<(source: CFUUID?, targets: [CFUUID]), Never> = .init()
 
     func refreshDisplays() {
         os_log("Starting display refresh...")
+
+        // Resetting first on every refresh will cause a rollback + reset the offset capture and fixes issues where connecting/disconnecting a monitor will corrupt its offset.
+        displaysPublisher.send((nil, []))
 
         let isOnConsole = (CGSessionCopyCurrentDictionary() as NSDictionary?)?[kCGSessionOnConsoleKey] as? Bool ?? false
 
@@ -250,14 +253,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 .filter { CGDisplayIsBuiltin($0) == 1 }
                 .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
                 .first
+
             let targets = allDisplays
                 .filter { lgDisplayIdentifiers.contains(DisplayIdentifier(vendorNumber: CGDisplayVendorNumber($0), modelNumber: CGDisplayModelNumber($0))) }
                 .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
 
-            displaysPublisher.send((builtin, targets))
+                displaysPublisher.send((builtin, targets))
         } else {
             os_log("User not active")
-            displaysPublisher.send((nil, []))
         }
     }
 
