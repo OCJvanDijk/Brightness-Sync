@@ -26,7 +26,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem(title: "Brightness Offset:", action: nil, keyEquivalent: ""))
         let slidersItem = NSMenuItem()
-        let slidersView = NSHostingView(rootView: SlidersView(monitorPublisher: targetDisplaysPublisher.eraseToAnyPublisher()).environmentObject(monitorOffsets))
+        let slidersView = NSHostingView(rootView: SlidersView(monitorPublisher: displaysPublisher.map { $0.targets }.eraseToAnyPublisher()).environmentObject(monitorOffsets))
         slidersView.translatesAutoresizingMaskIntoConstraints = false
         slidersView.widthAnchor.constraint(equalToConstant: 250).isActive = true
         slidersView.layoutSubtreeIfNeeded()
@@ -102,10 +102,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let diagnostics = """
         CGDisplayList:
         \(CGDisplays.map {
-                    ["VendorNumber": CGDisplayVendorNumber($0),
-                                   "ModelNumber": CGDisplayModelNumber($0),
-                                   "SerialNumber": CGDisplaySerialNumber($0)]
-                       })
+                            ["VendorNumber": CGDisplayVendorNumber($0),
+                                                                         "ModelNumber": CGDisplayModelNumber($0),
+                                                                         "SerialNumber": CGDisplaySerialNumber($0)]
+                                 })
 
         IODisplayList:
         \(IODisplays)
@@ -135,21 +135,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var cancelBag = Set<AnyCancellable>()
 
     func setup() {
-        let statusPublisher = sourceDisplayPublisher
-            .combineLatest(targetDisplaysPublisher, pausedPublisher)
-            .map { [monitorOffsets] source, targets, paused -> AnyPublisher<Status, Never> in
+        let statusPublisher = displaysPublisher
+            .combineLatest(pausedPublisher)
+            .map { [monitorOffsets] displays, paused -> AnyPublisher<Status, Never> in
                 // We don't want the timer running unless necessary to save energy
                 if paused {
                     os_log("Paused...")
                     return Just(.paused).eraseToAnyPublisher()
-                } else if let source = source, !targets.isEmpty {
+                } else if let source = displays.source, !displays.targets.isEmpty {
                     os_log("Activated...")
                     return Timer.publish(every: Self.updateInterval, on: .current, in: .common)
                         .autoconnect()
                         .map { _ in
                             .running(
                                 sourceBrightness: CoreDisplay_Display_GetLinearBrightness(CGDisplayGetDisplayIDFromUUID(source)),
-                                targets: targets.map {
+                                targets: displays.targets.map {
                                     .init(
                                         id: $0,
                                         brightness: CoreDisplay_Display_GetLinearBrightness(CGDisplayGetDisplayIDFromUUID($0)),
@@ -159,7 +159,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                             )
                         }
                         .eraseToAnyPublisher()
-                } else if source == nil {
+                } else if displays.source == nil {
                     os_log("Deactivated...")
                     return Just(.lidClosed).eraseToAnyPublisher()
                 } else {
@@ -235,25 +235,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Displays
 
-    let sourceDisplayPublisher: CurrentValueSubject<CFUUID?, Never> = .init(nil)
-    let targetDisplaysPublisher: CurrentValueSubject<[CFUUID], Never> = .init([])
+    let displaysPublisher: CurrentValueSubject<(source: CFUUID?, targets: [CFUUID]), Never> = .init((nil, []))
 
     func refreshDisplays() {
         os_log("Starting display refresh...")
 
-        let allDisplays = AppDelegate.getAllDisplays()
-        let lgDisplayIdentifiers = AppDelegate.getConnectedUltraFineDisplayIdentifiers()
+        let isOnConsole = (CGSessionCopyCurrentDictionary() as NSDictionary?)?[kCGSessionOnConsoleKey] as? Bool ?? false
 
-        let builtin = allDisplays
-            .filter { CGDisplayIsBuiltin($0) == 1 }
-            .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
-            .first
-        let targets = allDisplays
-            .filter { lgDisplayIdentifiers.contains(DisplayIdentifier(vendorNumber: CGDisplayVendorNumber($0), modelNumber: CGDisplayModelNumber($0))) }
-            .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
+        if isOnConsole {
+            let allDisplays = AppDelegate.getAllDisplays()
+            let lgDisplayIdentifiers = AppDelegate.getConnectedUltraFineDisplayIdentifiers()
 
-        sourceDisplayPublisher.send(builtin)
-        targetDisplaysPublisher.send(targets)
+            let builtin = allDisplays
+                .filter { CGDisplayIsBuiltin($0) == 1 }
+                .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
+                .first
+            let targets = allDisplays
+                .filter { lgDisplayIdentifiers.contains(DisplayIdentifier(vendorNumber: CGDisplayVendorNumber($0), modelNumber: CGDisplayModelNumber($0))) }
+                .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
+
+            displaysPublisher.send((builtin, targets))
+        } else {
+            os_log("User not active")
+            displaysPublisher.send((nil, []))
+        }
     }
 
     static let maxDisplays: UInt32 = 8
