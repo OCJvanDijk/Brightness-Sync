@@ -96,23 +96,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func copyDiagnosticsToPasteboard() {
-        let CGDisplays = AppDelegate.getAllDisplays()
-        let IODisplays = AppDelegate.getDisplayInfoDictionaries()
-
-        let diagnostics = """
-        CGDisplayList:
-        \(CGDisplays.map {
-                            ["VendorNumber": CGDisplayVendorNumber($0),
-                                                                         "ModelNumber": CGDisplayModelNumber($0),
-                                                                         "SerialNumber": CGDisplaySerialNumber($0)]
-                                 })
-
-        IODisplayList:
-        \(IODisplays)
-        """
+        let displayInfoDict = Dictionary(uniqueKeysWithValues: AppDelegate.getAllDisplays().map { ($0, CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue()) })
 
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(diagnostics, forType: .string)
+        NSPasteboard.general.setString(String(describing: displayInfoDict), forType: .string)
     }
 
     // MARK: - Brightness Sync
@@ -247,7 +234,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         if isOnConsole {
             let allDisplays = AppDelegate.getAllDisplays()
-            let lgDisplayIdentifiers = AppDelegate.getConnectedUltraFineDisplayIdentifiers()
 
             let builtin = allDisplays
                 .filter { CGDisplayIsBuiltin($0) == 1 }
@@ -255,10 +241,35 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 .first
 
             let targets = allDisplays
-                .filter { lgDisplayIdentifiers.contains(DisplayIdentifier(vendorNumber: CGDisplayVendorNumber($0), modelNumber: CGDisplayModelNumber($0))) }
+                .filter {
+                    if let displayInfo = CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue() as NSDictionary? {
+                        if
+                            let displayNames = displayInfo[kDisplayProductName] as? NSDictionary,
+                            let displayName = displayNames["en_US"] as? NSString
+                        {
+                            if
+                                displayName.contains("LG UltraFine")
+                            {
+                                os_log("Found compatible display: %{public}@", displayName)
+                                return true
+                            }
+                            else {
+                                os_log("Found incompatible display: %{public}@", displayName)
+                                return false
+                            }
+                        }
+                        else {
+                            os_log("Display without en_US name found.")
+                            return false
+                        }
+                    } else {
+                        os_log("Display without retrievable info found.")
+                        return false
+                    }
+                }
                 .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
 
-                displaysPublisher.send((builtin, targets))
+            displaysPublisher.send((builtin, targets))
         } else {
             os_log("User not active")
         }
@@ -273,64 +284,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         CGGetOnlineDisplayList(maxDisplays, &onlineDisplays, &displayCount)
 
         return Array(onlineDisplays[0..<Int(displayCount)])
-    }
-
-    static func getConnectedUltraFineDisplayIdentifiers() -> Set<DisplayIdentifier> {
-        var ultraFineDisplays = Set<DisplayIdentifier>()
-
-        for displayInfo in getDisplayInfoDictionaries() {
-            if
-                let displayNames = displayInfo[kDisplayProductName] as? NSDictionary,
-                let displayName = displayNames["en_US"] as? NSString
-            {
-                if
-                    displayName.contains("LG UltraFine"),
-                    let vendorNumber = displayInfo[kDisplayVendorID] as? UInt32,
-                    let modelNumber = displayInfo[kDisplayProductID] as? UInt32
-                {
-                    os_log("Found compatible display: %{public}@", displayName)
-                    ultraFineDisplays.insert(DisplayIdentifier(vendorNumber: vendorNumber, modelNumber: modelNumber))
-                }
-                else {
-                    os_log("Found incompatible display: %{public}@", displayName)
-                }
-            }
-            else {
-                os_log("Display without en_US name found.")
-            }
-        }
-
-        return ultraFineDisplays
-    }
-
-    static func getDisplayInfoDictionaries() -> [NSDictionary] {
-        var diplayInfoDictionaries = [NSDictionary]()
-
-        var iterator: io_iterator_t = 0
-        guard IOServiceGetMatchingServices(kIOMasterPortDefault, IOServiceMatching("IODisplayConnect"), &iterator) == 0 else {
-            return diplayInfoDictionaries
-        }
-
-        var display = IOIteratorNext(iterator)
-
-        while display != 0 {
-            if let displayInfo = IODisplayCreateInfoDictionary(display, 0)?.takeRetainedValue() {
-                diplayInfoDictionaries.append(displayInfo)
-            }
-
-            IOObjectRelease(display)
-
-            display = IOIteratorNext(iterator)
-        }
-
-        IOObjectRelease(iterator)
-
-        return diplayInfoDictionaries
-    }
-
-    struct DisplayIdentifier: Hashable {
-        let vendorNumber: UInt32
-        let modelNumber: UInt32
     }
 }
 
