@@ -116,11 +116,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let offset: Double
     }
 
-    static let updateInterval = 0.1
-
     var cancelBag = Set<AnyCancellable>()
 
     func setup() {
+        UserDefaults.standard.register(defaults: ["BSUpdateInterval": 0.1])
+        let updateInterval = UserDefaults.standard.double(forKey: "BSUpdateInterval")
+        if updateInterval != 0.1 {
+            os_log("Using custom polling interval: %fs", updateInterval)
+        }
+
         let statusPublisher = displaysPublisher
             .combineLatest(pausedPublisher)
             .map { [monitorOffsets] displays, paused -> AnyPublisher<Status, Never> in
@@ -130,7 +134,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     return Just(.paused).eraseToAnyPublisher()
                 } else if let source = displays.source, !displays.targets.isEmpty {
                     os_log("Activated...")
-                    return Timer.publish(every: Self.updateInterval, on: .current, in: .common)
+                    return Timer.publish(every: updateInterval, on: .current, in: .common)
                         .autoconnect()
                         .map { _ in
                             .running(
