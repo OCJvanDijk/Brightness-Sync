@@ -171,12 +171,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
         statusPublisher
-            .scan(nil) { previouslySynced, newStatus -> [Target]? in
-                guard case let .running(sourceBrightness, targets) = newStatus else { return nil }
+            .scan([]) { previouslySynced, newStatus -> [Target] in
+                guard case let .running(sourceBrightness, targets) = newStatus else { return [] }
 
                 return targets.map { target in
                     var offset = target.offset
-                    if let expectedBrightness = previouslySynced?.first(where: { $0.id == target.id })?.brightness, abs(target.brightness - expectedBrightness) > 0.0001 {
+                    if let expectedBrightness = previouslySynced.first(where: { $0.id == target.id })?.brightness, abs(target.brightness - expectedBrightness) > 0.0001 {
                         let currentTargetUserBrightness = estimatedLinearToUserBrightness(target.brightness)
                         let expectedTargetUserBrightness = estimatedLinearToUserBrightness(expectedBrightness)
                         let offsetDelta = currentTargetUserBrightness - expectedTargetUserBrightness
@@ -192,7 +192,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     return .init(id: target.id, brightness: adjustedEstimatedLinearBrightness, offset: offset)
                 }
             }
-            .compactMap { $0 }
             .merge(with: rollbackInjector)
             .sink { [monitorOffsets] targets in
                 for target in targets {
