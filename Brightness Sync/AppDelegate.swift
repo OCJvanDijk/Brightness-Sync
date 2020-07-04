@@ -54,15 +54,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
 
         setup()
-        refreshDisplays()
+        setupDisplayMonitor()
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
         // Insert code here to tear down your application
-    }
-
-    func applicationDidChangeScreenParameters(_ notification: Notification) {
-        refreshDisplays()
     }
 
     let pausedPublisher = CurrentValueSubject<Bool, Never>(false)
@@ -226,25 +222,41 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Displays
 
+    var activeDisplays = Set<CGDirectDisplayID>()
     let displaysPublisher: PassthroughSubject<(source: CFUUID?, targets: [CFUUID]), Never> = .init()
+
+    func setupDisplayMonitor() {
+        activeDisplays = Set(Self.getAllDisplays())
+
+        // We use reconfiguration callback instead of calling getAllDisplays() on every display refresh to make sure displays are truly active and "brightness writable" to prevent offset shift.
+        CGDisplayRegisterReconfigurationCallback({ id, flags, selfPointer in
+            let appDelegate = Unmanaged<AppDelegate>.fromOpaque(selfPointer!).takeUnretainedValue()
+            if flags.contains(.addFlag) {
+                appDelegate.activeDisplays.insert(id)
+            } else if flags.contains(.removeFlag) {
+                appDelegate.activeDisplays.remove(id)
+            }
+        }, Unmanaged<AppDelegate>.passUnretained(self).toOpaque())
+
+        refreshDisplays()
+    }
+
+    func applicationDidChangeScreenParameters(_ notification: Notification) {
+        refreshDisplays()
+    }
 
     func refreshDisplays() {
         os_log("Starting display refresh...")
 
-        // Resetting first on every refresh will cause a rollback + reset the offset capture and fixes issues where connecting/disconnecting a monitor will corrupt its offset.
-        displaysPublisher.send((nil, []))
-
         let isOnConsole = (CGSessionCopyCurrentDictionary() as NSDictionary?)?[kCGSessionOnConsoleKey] as? Bool ?? false
 
         if isOnConsole {
-            let allDisplays = AppDelegate.getAllDisplays()
-
-            let builtin = allDisplays
+            let builtin = activeDisplays
                 .filter { CGDisplayIsBuiltin($0) == 1 }
                 .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
                 .first
 
-            let targets = allDisplays
+            let targets = activeDisplays
                 .filter {
                     if let displayInfo = CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue() as NSDictionary? {
                         if
@@ -275,6 +287,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             displaysPublisher.send((builtin, targets))
         } else {
+            displaysPublisher.send((nil, []))
             os_log("User not active")
         }
     }
