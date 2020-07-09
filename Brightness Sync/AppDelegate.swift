@@ -163,7 +163,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let rollbackInjector = statusPublisher
             .withLatestFrom(pastStatusPublisher)
             .compactMap { brightnessStatus, brightnessStatusTwoSecondsAgo -> [Target]? in
-                if brightnessStatus == .deactivated, case let .running(_, targets) = brightnessStatusTwoSecondsAgo {
+                if brightnessStatus == .deactivated, case .running(_, let targets) = brightnessStatusTwoSecondsAgo {
                     return targets
                 } else {
                     return nil
@@ -172,7 +172,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         statusPublisher
             .scan([]) { previouslySynced, newStatus -> [Target] in
-                guard case let .running(sourceBrightness, targets) = newStatus else { return [] }
+                guard case .running(let sourceBrightness, let targets) = newStatus else { return [] }
 
                 return targets.map { target in
                     var offset = target.offset
