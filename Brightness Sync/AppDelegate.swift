@@ -92,7 +92,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func copyDiagnosticsToPasteboard() {
-        let displayInfoDict = Dictionary(uniqueKeysWithValues: AppDelegate.getAllDisplays().map { ($0, CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue()) })
+        let displayInfoDict = Dictionary(uniqueKeysWithValues: activeDisplays.map { ($0, CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue()) })
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(String(describing: displayInfoDict), forType: .string)
@@ -225,15 +225,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let displaysPublisher: PassthroughSubject<(source: CFUUID?, targets: [CFUUID]), Never> = .init()
 
     func setupDisplayMonitor() {
-        activeDisplays = Set(Self.getAllDisplays())
+        activeDisplays = Self.getActiveDisplays()
 
         // We use reconfiguration callback instead of calling getAllDisplays() on every display refresh to make sure displays are truly active and "brightness writable" to prevent offset shift.
         CGDisplayRegisterReconfigurationCallback({ id, flags, selfPointer in
-            let appDelegate = Unmanaged<AppDelegate>.fromOpaque(selfPointer!).takeUnretainedValue()
-            if flags.contains(.addFlag) {
-                appDelegate.activeDisplays.insert(id)
-            } else if flags.contains(.removeFlag) {
-                appDelegate.activeDisplays.remove(id)
+            let `self` = Unmanaged<AppDelegate>.fromOpaque(selfPointer!).takeUnretainedValue()
+
+            if flags.contains(.beginConfigurationFlag) {
+                self.activeDisplays.removeAll()
+            }
+            else if !flags.contains(.removeFlag) {
+                self.activeDisplays.insert(id)
             }
         }, Unmanaged<AppDelegate>.passUnretained(self).toOpaque())
 
@@ -246,45 +248,46 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func refreshDisplays() {
         os_log("Starting display refresh...")
+        os_log("Displays: %{public}@", activeDisplays)
 
         let isOnConsole = (CGSessionCopyCurrentDictionary() as NSDictionary?)?[kCGSessionOnConsoleKey] as? Bool ?? false
 
         if isOnConsole {
-            let builtin = activeDisplays
-                .filter { CGDisplayIsBuiltin($0) == 1 }
-                .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
-                .first
+        let builtin = activeDisplays
+            .filter { CGDisplayIsBuiltin($0) == 1 }
+            .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
+            .first
 
-            let targets = activeDisplays
-                .filter {
-                    if let displayInfo = CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue() as NSDictionary? {
+        let targets = activeDisplays
+            .filter {
+                if let displayInfo = CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue() as NSDictionary? {
+                    if
+                        let displayNames = displayInfo[kDisplayProductName] as? NSDictionary,
+                        let displayName = displayNames["en_US"] as? NSString
+                    {
                         if
-                            let displayNames = displayInfo[kDisplayProductName] as? NSDictionary,
-                            let displayName = displayNames["en_US"] as? NSString
+                            displayName.contains("LG UltraFine")
                         {
-                            if
-                                displayName.contains("LG UltraFine")
-                            {
-                                os_log("Found compatible display: %{public}@", displayName)
-                                return true
-                            }
-                            else {
-                                os_log("Found incompatible display: %{public}@", displayName)
-                                return false
-                            }
+                            os_log("Found compatible display: %{public}@", displayName)
+                            return true
                         }
                         else {
-                            os_log("Display without en_US name found.")
+                            os_log("Found incompatible display: %{public}@", displayName)
                             return false
                         }
-                    } else {
-                        os_log("Display without retrievable info found.")
+                    }
+                    else {
+                        os_log("Display without en_US name found.")
                         return false
                     }
+                } else {
+                    os_log("Display without retrievable info found.")
+                    return false
                 }
-                .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
+            }
+            .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
 
-            displaysPublisher.send((builtin, targets))
+        displaysPublisher.send((builtin, targets))
         } else {
             displaysPublisher.send((nil, []))
             os_log("User not active")
@@ -293,13 +296,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     static let maxDisplays: UInt32 = 8
 
-    static func getAllDisplays() -> [CGDirectDisplayID] {
-        var onlineDisplays = [CGDirectDisplayID](repeating: 0, count: Int(maxDisplays))
+    static func getActiveDisplays() -> Set<CGDirectDisplayID> {
+        var activeDisplays = [CGDirectDisplayID](repeating: 0, count: Int(maxDisplays))
         var displayCount: UInt32 = 0
 
-        CGGetOnlineDisplayList(maxDisplays, &onlineDisplays, &displayCount)
+        CGGetActiveDisplayList(maxDisplays, &activeDisplays, &displayCount)
 
-        return Array(onlineDisplays[0..<Int(displayCount)])
+        return Set(activeDisplays[0..<Int(displayCount)])
     }
 }
 
