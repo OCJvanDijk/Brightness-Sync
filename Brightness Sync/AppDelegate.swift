@@ -33,6 +33,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         slidersItem.view = slidersView
         menu.addItem(slidersItem)
         menu.addItem(NSMenuItem(title: "Reset", action: #selector(brightnessOffsetReset), keyEquivalent: ""))
+        lockOffsetMenuItem.state = lockOffset ? .on : .off
+        menu.addItem(lockOffsetMenuItem)
         menu.addItem(NSMenuItem.separator())
 
         let launchAtLoginEnabled = (SMJobCopyDictionary(kSMDomainUserLaunchd, Self.launcherId)?.takeRetainedValue() as NSDictionary?)?["OnDemand"] as? Bool ?? false
@@ -75,6 +77,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .forEach { key in
                 UserDefaults.standard.removeObject(forKey: key)
             }
+    }
+
+    var lockOffset: Bool {
+        get {
+            UserDefaults.standard.object(forKey: "BSLockBrightness") as? Bool ?? true
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "BSLockBrightness")
+        }
+    }
+    let lockOffsetMenuItem = NSMenuItem(title: "Lock", action: #selector(toggleLockOffset), keyEquivalent: "")
+    @objc func toggleLockOffset() {
+        lockOffset.toggle()
+        lockOffsetMenuItem.state = lockOffset ? .on : .off
     }
 
     let launchAtLoginMenuItem = NSMenuItem(title: "Launch At Login", action: #selector(toggleLaunchAtLoginEnabled), keyEquivalent: "")
@@ -171,12 +187,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
         statusPublisher
-            .scan([]) { previouslySynced, newStatus -> [Target] in
+            .scan([]) { [weak self] previouslySynced, newStatus -> [Target] in
                 guard case .running(let sourceBrightness, let targets) = newStatus else { return [] }
 
                 return targets.map { target in
                     var offset = target.offset
-                    if let expectedBrightness = previouslySynced.first(where: { $0.id == target.id })?.brightness, abs(target.brightness - expectedBrightness) > 0.0001 {
+                    let lockOffset = self?.lockOffset ?? true
+                    if !lockOffset, let expectedBrightness = previouslySynced.first(where: { $0.id == target.id })?.brightness, abs(target.brightness - expectedBrightness) > 0.0001 {
                         let currentTargetUserBrightness = estimatedLinearToUserBrightness(target.brightness)
                         let expectedTargetUserBrightness = estimatedLinearToUserBrightness(expectedBrightness)
                         let offsetDelta = currentTargetUserBrightness - expectedTargetUserBrightness
