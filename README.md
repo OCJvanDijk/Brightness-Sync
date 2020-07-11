@@ -5,8 +5,6 @@ Alternatively, you can use [Homebrew Cask](https://github.com/Homebrew/homebrew-
 
 _The app doesn't automatically check for updates. If you want to stay up-to-date, I recommend selecting "Watch->Releases only" at the top of this page if you have a GitHub account, or using the Homebrew Cask installation method._
 
-If you are interested in fine tuning the relative brightness between your displays, check out the [beta version](https://github.com/OCJvanDijk/Brightness-Sync/releases).
-
 ## About
 This is a small menu bar app to mitigate the problem of the first-generation LG UltraFine not being able to automatically adjust brightness.
 It will poll the brightness of your built-in display and synchronize it to your LG monitors.
@@ -18,7 +16,9 @@ Other apps might virtually darken the display with the backlight staying the sam
 
 Because this app relies on your Mac’s ambient light sensor, unfortunately it won't help with automatic brightness if your MacBook is in clamshell mode or you have connected your UltraFine to for example a Mac Mini.
 
-I only have one 27-inch LG UltraFine display, so I could do only limited testing. Let me know if you have issues.
+If you are interested in controlling and finetuning the relative brightness between your displays throughout the day, disable the offset lock in the menu. Now you can use various ways to control your UltraFine's offset. For more info see the release notes for [v2.2.0](https://github.com/OCJvanDijk/Brightness-Sync/releases/tag/v2.2.0).
+
+I only have one 27-inch LG UltraFine display, so I can do only limited testing. Let me know if you have issues.
 
 Requires macOS 10.15. If you're on 10.14, you can download v1 from the releases page.
 
