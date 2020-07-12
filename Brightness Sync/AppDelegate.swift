@@ -271,8 +271,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let isOnConsole = (CGSessionCopyCurrentDictionary() as NSDictionary?)?[kCGSessionOnConsoleKey] as? Bool ?? false
 
         if isOnConsole {
+            let lgVendorNumber = 7789
+//            let ultraFine5k1stGenModelNumber = 23313
+            let ultraFine5k2ndGenModelNumber = 23412
+
             let builtin = activeDisplays
                 .filter { CGDisplayIsBuiltin($0) == 1 }
+                .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
+                .first
+
+            let source = builtin ?? activeDisplays
+                .filter { CGDisplayVendorNumber($0) == lgVendorNumber && CGDisplayModelNumber($0) == ultraFine5k2ndGenModelNumber }
                 .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
                 .first
 
@@ -303,9 +312,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         return false
                     }
                 }
+                .filter { CGDisplayModelNumber($0) != ultraFine5k2ndGenModelNumber }
                 .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
 
-            displaysPublisher.send((builtin, targets))
+            displaysPublisher.send((source, targets))
         } else {
             displaysPublisher.send((nil, []))
             os_log("User not active")
