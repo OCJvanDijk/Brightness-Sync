@@ -28,3 +28,14 @@ _However_ it will automatically stop the polling when no UltraFine displays are 
 
 ## Known issues
 If you enter/exit clamshell mode by closing/opening your lid with the monitor attached, it might go completely bright for a second before restoring to the last synchronized brightness.
+
+This app was designed with 1st generation UltraFines in mind that don't support auto brightness. I started work on supporting mixed setups with both 1st gen and 2nd gen displays, but I need some help gathering model numbers (as reported by macOS) so I can distinguish between them.
+
+| Model                   | Model Number / Product ID |
+|-------------------------|---------------------------|
+| LG UltraFine 4k 1st Gen | ??                        |
+| LG UltraFine 4k 2nd Gen | ??                        |
+| LG UltraFine 5k 1st Gen | 23313                     |
+| LG UltraFine 5k 2nd Gen | 23412                     |
+
+If you own one of the missing models, you can help by running the app, opening the menu in the menu bar and pressing ⌘C to copy some diagnostics about your connected displays to your clipboard (the menu will close). Then you can mail it to me or open an issue or PR.
