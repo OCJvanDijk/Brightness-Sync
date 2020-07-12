@@ -87,6 +87,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             UserDefaults.standard.set(newValue, forKey: "BSLockBrightness")
         }
     }
+
     let lockOffsetMenuItem = NSMenuItem(title: "Lock", action: #selector(toggleLockOffset), keyEquivalent: "")
     @objc func toggleLockOffset() {
         lockOffset.toggle()
@@ -270,41 +271,41 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let isOnConsole = (CGSessionCopyCurrentDictionary() as NSDictionary?)?[kCGSessionOnConsoleKey] as? Bool ?? false
 
         if isOnConsole {
-        let builtin = activeDisplays
-            .filter { CGDisplayIsBuiltin($0) == 1 }
-            .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
-            .first
+            let builtin = activeDisplays
+                .filter { CGDisplayIsBuiltin($0) == 1 }
+                .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
+                .first
 
-        let targets = activeDisplays
-            .filter {
-                if let displayInfo = CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue() as NSDictionary? {
-                    if
-                        let displayNames = displayInfo[kDisplayProductName] as? NSDictionary,
-                        let displayName = displayNames["en_US"] as? NSString
-                    {
+            let targets = activeDisplays
+                .filter {
+                    if let displayInfo = CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue() as NSDictionary? {
                         if
-                            displayName.contains("LG UltraFine")
+                            let displayNames = displayInfo[kDisplayProductName] as? NSDictionary,
+                            let displayName = displayNames["en_US"] as? NSString
                         {
-                            os_log("Found compatible display: %{public}@", displayName)
-                            return true
+                            if
+                                displayName.contains("LG UltraFine")
+                            {
+                                os_log("Found compatible display: %{public}@", displayName)
+                                return true
+                            }
+                            else {
+                                os_log("Found incompatible display: %{public}@", displayName)
+                                return false
+                            }
                         }
                         else {
-                            os_log("Found incompatible display: %{public}@", displayName)
+                            os_log("Display without en_US name found.")
                             return false
                         }
-                    }
-                    else {
-                        os_log("Display without en_US name found.")
+                    } else {
+                        os_log("Display without retrievable info found.")
                         return false
                     }
-                } else {
-                    os_log("Display without retrievable info found.")
-                    return false
                 }
-            }
-            .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
+                .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
 
-        displaysPublisher.send((builtin, targets))
+            displaysPublisher.send((builtin, targets))
         } else {
             displaysPublisher.send((nil, []))
             os_log("User not active")
