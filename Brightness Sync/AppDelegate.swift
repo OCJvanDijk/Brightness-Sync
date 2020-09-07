@@ -271,9 +271,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let isOnConsole = (CGSessionCopyCurrentDictionary() as NSDictionary?)?[kCGSessionOnConsoleKey] as? Bool ?? false
 
         if isOnConsole {
-            let lgVendorNumber = 7789
-//            let ultraFine5k1stGenModelNumber = 23313
-            let ultraFine5k2ndGenModelNumber = 23412
+            let lgVendorNumber: UInt32 = 7789
+//            let ultraFine5k1stGenModelNumber: UInt32 = 23313
+            let ultraFine4k2ndGenModelNumber: UInt32 = 23419
+            let ultraFine5k2ndGenModelNumber: UInt32 = 23412
+
+            func is2ndGenUltraFine(_ display: CGDirectDisplayID) -> Bool {
+                switch (CGDisplayVendorNumber(display), CGDisplayModelNumber(display)) {
+                case (lgVendorNumber, ultraFine4k2ndGenModelNumber), (lgVendorNumber, ultraFine5k2ndGenModelNumber):
+                    return true
+                default:
+                    return false
+                }
+            }
 
             let builtin = activeDisplays
                 .filter { CGDisplayIsBuiltin($0) == 1 }
@@ -281,7 +291,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 .first
 
             let source = builtin ?? activeDisplays
-                .filter { CGDisplayVendorNumber($0) == lgVendorNumber && CGDisplayModelNumber($0) == ultraFine5k2ndGenModelNumber }
+                .filter { is2ndGenUltraFine($0) }
                 .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
                 .first
 
@@ -312,8 +322,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         return false
                     }
                 }
-                .filter { CGDisplayModelNumber($0) != ultraFine5k2ndGenModelNumber }
                 .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
+                .filter { $0 != source }
 
             displaysPublisher.send((source, targets))
         } else {
