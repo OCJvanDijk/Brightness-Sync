@@ -35,7 +35,7 @@ This app was designed with 1st generation UltraFines in mind that don't support 
 | Model                   | Model Number / Product ID |
 |-------------------------|---------------------------|
 | LG UltraFine 4k 1st Gen | ??                        |
-| LG UltraFine 4k 2nd Gen | ??                        |
+| LG UltraFine 4k 2nd Gen | 23419                     |
 | LG UltraFine 5k 1st Gen | 23313                     |
 | LG UltraFine 5k 2nd Gen | 23412                     |
 
