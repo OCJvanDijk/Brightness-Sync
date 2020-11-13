@@ -27,16 +27,8 @@ Requires macOS 10.15. If you're on 10.14, you can download v1 from the releases 
 The app polls the brightness pretty aggressively, which results in a small energy impact of around 0.3-0.5 according to Activity Monitor.
 _However_ it will automatically stop the polling when no UltraFine displays are connected and because those monitors are also a power source, this effectively means it will never run when on battery power.
 
+## 2nd Gen UltraFine support
+This app was designed with 1st generation UltraFines in mind that don't support auto brightness. I started work on supporting mixed setups with both 1st gen and 2nd gen displays in v2.3.0. If no built-in display is detected, it will use a 2nd gen display as the "source" and sync its brightness to all other connected displays. The app will currently override the auto brightness of all 2nd gen displays that aren't used as the source, because some people have reported the auto brightness of the 2nd gen to not be so reliable and are using this app to sync the brightness of the built-in display to the 2nd gen. You should probably turn off the built-in auto brightness of the 2nd gen in the Settings if you do this. Other people might want to only sync to 1st gen and let the 2nd gen handle its own auto brightness. I'm considering making this an option for those people.
+
 ## Known issues
 If you enter/exit clamshell mode by closing/opening your lid with the monitor attached, it might go completely bright for a second before restoring to the last synchronized brightness.
-
-This app was designed with 1st generation UltraFines in mind that don't support auto brightness. I started work on supporting mixed setups with both 1st gen and 2nd gen displays, but I need some help gathering model numbers (as reported by macOS) so I can distinguish between them.
-
-| Model                   | Model Number / Product ID |
-|-------------------------|---------------------------|
-| LG UltraFine 4k 1st Gen | ??                        |
-| LG UltraFine 4k 2nd Gen | 23419                     |
-| LG UltraFine 5k 1st Gen | 23313                     |
-| LG UltraFine 5k 2nd Gen | 23412                     |
-
-If you own one of the missing models, you can help by running the app, opening the menu in the menu bar and pressing ⌘C to copy some diagnostics about your connected displays to your clipboard (the menu will close). Then you can mail it to me or open an issue or PR.
