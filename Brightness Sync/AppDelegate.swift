@@ -272,6 +272,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         if isOnConsole {
             let lgVendorNumber: UInt32 = 7789
+//            let ultraFine4k1stGenModelNumber: UInt32 = 23312
 //            let ultraFine5k1stGenModelNumber: UInt32 = 23313
             let ultraFine4k2ndGenModelNumber: UInt32 = 23419
             let ultraFine5k2ndGenModelNumber: UInt32 = 23412
