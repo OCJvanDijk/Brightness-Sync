@@ -109,7 +109,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func copyDiagnosticsToPasteboard() {
-        let displayInfoDict = Dictionary(uniqueKeysWithValues: activeDisplays.map { ($0, CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue()) })
+        let displayInfoDict = Dictionary(uniqueKeysWithValues: Self.getActiveDisplays().map { ($0, CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue()) })
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(String(describing: displayInfoDict), forType: .string)
@@ -239,40 +239,66 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Displays
 
-    var activeDisplays = Set<CGDirectDisplayID>()
     let displaysPublisher: PassthroughSubject<(source: CFUUID?, targets: [CFUUID]), Never> = .init()
 
-    func setupDisplayMonitor() {
-        activeDisplays = Self.getActiveDisplays()
+    var activeDisplayTrackerSet = Set<CGDirectDisplayID>()
+    var activeDisplayTrackerCounter = 0
 
+    func setupDisplayMonitor() {
         // We use reconfiguration callback instead of calling getAllDisplays() on every display refresh to make sure displays are truly active and "brightness writable" to prevent offset shift.
         CGDisplayRegisterReconfigurationCallback({ id, flags, selfPointer in
             let `self` = Unmanaged<AppDelegate>.fromOpaque(selfPointer!).takeUnretainedValue()
 
             if flags.contains(.beginConfigurationFlag) {
-                self.activeDisplays.removeAll()
+                if self.activeDisplayTrackerCounter == 0 {
+                    self.activeDisplayTrackerSet = []
+                    self.refreshDisplays(fromActiveDisplays: []) // Deactivate during reconfiguration
+                }
+                self.activeDisplayTrackerCounter += 1
             }
-            else if !flags.contains(.removeFlag) {
-                self.activeDisplays.insert(id)
+            else {
+                self.activeDisplayTrackerCounter -= 1
+                if !flags.contains(.removeFlag) {
+                    self.activeDisplayTrackerSet.insert(id)
+                }
+                if self.activeDisplayTrackerCounter == 0 {
+                    self.refreshDisplays(fromActiveDisplays: self.activeDisplayTrackerSet)
+                }
             }
         }, Unmanaged<AppDelegate>.passUnretained(self).toOpaque())
 
-        refreshDisplays()
+        refreshDisplays(fromActiveDisplays: Self.getActiveDisplays())
     }
 
-    func applicationDidChangeScreenParameters(_ notification: Notification) {
-        refreshDisplays()
-    }
-
-    func refreshDisplays() {
+    func refreshDisplays(fromActiveDisplays activeDisplays: Set<CGDirectDisplayID>) {
         os_log("Starting display refresh...")
         os_log("Displays: %{public}@", activeDisplays)
 
         let isOnConsole = (CGSessionCopyCurrentDictionary() as NSDictionary?)?[kCGSessionOnConsoleKey] as? Bool ?? false
 
         if isOnConsole {
+            let lgVendorNumber: UInt32 = 7789
+//            let ultraFine4k1stGenModelNumber: UInt32 = 23312
+//            let ultraFine5k1stGenModelNumber: UInt32 = 23313
+            let ultraFine4k2ndGenModelNumber: UInt32 = 23419
+            let ultraFine5k2ndGenModelNumber: UInt32 = 23412
+
+            func is2ndGenUltraFine(_ display: CGDirectDisplayID) -> Bool {
+                switch (CGDisplayVendorNumber(display), CGDisplayModelNumber(display)) {
+                case (lgVendorNumber, ultraFine4k2ndGenModelNumber), (lgVendorNumber, ultraFine5k2ndGenModelNumber):
+                    return true
+                default:
+                    return false
+                }
+            }
+
             let builtin = activeDisplays
                 .filter { CGDisplayIsBuiltin($0) == 1 }
+                .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
+                .first
+
+            let source = builtin ?? activeDisplays
+                .filter { is2ndGenUltraFine($0) }
                 .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
                 .first
 
@@ -304,8 +330,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                 }
                 .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
+                .filter { $0 != source }
 
-            displaysPublisher.send((builtin, targets))
+            displaysPublisher.send((source, targets))
         } else {
             displaysPublisher.send((nil, []))
             os_log("User not active")
