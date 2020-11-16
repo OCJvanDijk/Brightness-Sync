@@ -109,7 +109,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func copyDiagnosticsToPasteboard() {
-        let displayInfoDict = Dictionary(uniqueKeysWithValues: activeDisplays.map { ($0, CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue()) })
+        let displayInfoDict = Dictionary(uniqueKeysWithValues: Self.getActiveDisplays().map { ($0, CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue()) })
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(String(describing: displayInfoDict), forType: .string)
@@ -239,32 +239,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Displays
 
-    var activeDisplays = Set<CGDirectDisplayID>()
     let displaysPublisher: PassthroughSubject<(source: CFUUID?, targets: [CFUUID]), Never> = .init()
 
-    func setupDisplayMonitor() {
-        activeDisplays = Self.getActiveDisplays()
+    var activeDisplayTrackerSet = Set<CGDirectDisplayID>()
+    var activeDisplayTrackerCounter = 0
 
+    func setupDisplayMonitor() {
         // We use reconfiguration callback instead of calling getAllDisplays() on every display refresh to make sure displays are truly active and "brightness writable" to prevent offset shift.
         CGDisplayRegisterReconfigurationCallback({ id, flags, selfPointer in
             let `self` = Unmanaged<AppDelegate>.fromOpaque(selfPointer!).takeUnretainedValue()
 
             if flags.contains(.beginConfigurationFlag) {
-                self.activeDisplays.removeAll()
+                if self.activeDisplayTrackerCounter == 0 {
+                    self.activeDisplayTrackerSet = []
+                    self.refreshDisplays(fromActiveDisplays: []) // Deactivate during reconfiguration
+                }
+                self.activeDisplayTrackerCounter += 1
             }
-            else if !flags.contains(.removeFlag) {
-                self.activeDisplays.insert(id)
+            else {
+                self.activeDisplayTrackerCounter -= 1
+                if !flags.contains(.removeFlag) {
+                    self.activeDisplayTrackerSet.insert(id)
+                }
+                if self.activeDisplayTrackerCounter == 0 {
+                    self.refreshDisplays(fromActiveDisplays: self.activeDisplayTrackerSet)
+                }
             }
         }, Unmanaged<AppDelegate>.passUnretained(self).toOpaque())
 
-        refreshDisplays()
+        refreshDisplays(fromActiveDisplays: Self.getActiveDisplays())
     }
 
-    func applicationDidChangeScreenParameters(_ notification: Notification) {
-        refreshDisplays()
-    }
-
-    func refreshDisplays() {
+    func refreshDisplays(fromActiveDisplays activeDisplays: Set<CGDirectDisplayID>) {
         os_log("Starting display refresh...")
         os_log("Displays: %{public}@", activeDisplays)
 
