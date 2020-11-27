@@ -246,8 +246,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func setupDisplayMonitor() {
         // We use reconfiguration callback to track if display reconfiguration is done, which is the only reliable way I've found to know if all displays are "brightness writable" to prevent offset shift.
         // All calls with beginConfigurationFlag are balanced with another call when configuration is done, so we keep track with a counter.
-        CGDisplayRegisterReconfigurationCallback({ id, flags, selfPointer in
-            let `self` = Unmanaged<AppDelegate>.fromOpaque(selfPointer!).takeUnretainedValue()
+        CGDisplayRegisterReconfigurationCallback({ id, flags, _ in
+            guard let `self` = NSApplication.shared.delegate as? AppDelegate else { return }
 
             if flags.contains(.beginConfigurationFlag) {
                 if self.displayReconfigurationCounter == 0 {
@@ -263,7 +263,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     self.refreshDisplays()
                 }
             }
-        }, Unmanaged<AppDelegate>.passUnretained(self).toOpaque())
+        }, nil)
 
         refreshDisplays()
     }
