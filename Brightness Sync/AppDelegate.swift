@@ -109,7 +109,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func copyDiagnosticsToPasteboard() {
-        let displayInfoDict = Dictionary(uniqueKeysWithValues: Self.getActiveDisplays().map { ($0, CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue()) })
+        let displayInfoDict = Dictionary(uniqueKeysWithValues: Self.getOnlineDisplays().map { ($0, CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue()) })
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(String(describing: displayInfoDict), forType: .string)
@@ -277,8 +277,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func refreshDisplays() {
         os_log("Starting display refresh...")
 
-        let activeDisplays = Self.getActiveDisplays()
-        os_log("Displays: %{public}@", activeDisplays)
+        let onlineDisplays = Self.getOnlineDisplays()
+        os_log("Displays: %{public}@", onlineDisplays)
 
         let isOnConsole = (CGSessionCopyCurrentDictionary() as NSDictionary?)?[kCGSessionOnConsoleKey] as? Bool ?? false
 
@@ -298,17 +298,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
 
-            let builtin = activeDisplays
+            let builtin = onlineDisplays
                 .filter { CGDisplayIsBuiltin($0) == 1 }
                 .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
                 .first
 
-            let source = builtin ?? activeDisplays
+            let source = builtin ?? onlineDisplays
                 .filter { is2ndGenUltraFine($0) }
                 .compactMap { CGDisplayCreateUUIDFromDisplayID($0)?.takeRetainedValue() }
                 .first
 
-            let targets = activeDisplays
+            let targets = onlineDisplays
                 .filter {
                     if let displayInfo = CoreDisplay_DisplayCreateInfoDictionary($0)?.takeRetainedValue() as NSDictionary? {
                         if
@@ -347,13 +347,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     static let maxDisplays: UInt32 = 8
 
-    static func getActiveDisplays() -> Set<CGDirectDisplayID> {
-        var activeDisplays = [CGDirectDisplayID](repeating: 0, count: Int(maxDisplays))
+    static func getOnlineDisplays() -> Set<CGDirectDisplayID> {
+        var onlineDisplays = [CGDirectDisplayID](repeating: 0, count: Int(maxDisplays))
         var displayCount: UInt32 = 0
 
-        CGGetActiveDisplayList(maxDisplays, &activeDisplays, &displayCount)
+        CGGetOnlineDisplayList(maxDisplays, &onlineDisplays, &displayCount)
 
-        return Set(activeDisplays[0..<Int(displayCount)])
+        return Set(onlineDisplays[0..<Int(displayCount)])
     }
 }
 
