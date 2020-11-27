@@ -241,37 +241,43 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     let displaysPublisher: PassthroughSubject<(source: CFUUID?, targets: [CFUUID]), Never> = .init()
 
-    var activeDisplayTrackerSet = Set<CGDirectDisplayID>()
-    var activeDisplayTrackerCounter = 0
+    var displayReconfigurationCounter = 0
 
     func setupDisplayMonitor() {
-        // We use reconfiguration callback instead of calling getAllDisplays() on every display refresh to make sure displays are truly active and "brightness writable" to prevent offset shift.
+        // We use reconfiguration callback to track if display reconfiguration is done, which is the only reliable way I've found to know if all displays are "brightness writable" to prevent offset shift.
+        // All calls with beginConfigurationFlag are balanced with another call when configuration is done, so we keep track with a counter.
         CGDisplayRegisterReconfigurationCallback({ id, flags, selfPointer in
             let `self` = Unmanaged<AppDelegate>.fromOpaque(selfPointer!).takeUnretainedValue()
 
             if flags.contains(.beginConfigurationFlag) {
-                if self.activeDisplayTrackerCounter == 0 {
-                    self.activeDisplayTrackerSet = []
-                    self.refreshDisplays(fromActiveDisplays: []) // Deactivate during reconfiguration
+                if self.displayReconfigurationCounter == 0 {
+                    os_log("Display reconfiguration started...")
+                    self.displaysPublisher.send((nil, [])) // Deactivate during reconfiguration
                 }
-                self.activeDisplayTrackerCounter += 1
+                self.displayReconfigurationCounter += 1
             }
             else {
-                self.activeDisplayTrackerCounter -= 1
-                if !flags.contains(.removeFlag) {
-                    self.activeDisplayTrackerSet.insert(id)
-                }
-                if self.activeDisplayTrackerCounter == 0 {
-                    self.refreshDisplays(fromActiveDisplays: self.activeDisplayTrackerSet)
+                self.displayReconfigurationCounter -= 1
+                if self.displayReconfigurationCounter == 0 {
+                    os_log("Display reconfiguration ended...")
+                    self.refreshDisplays()
                 }
             }
         }, Unmanaged<AppDelegate>.passUnretained(self).toOpaque())
 
-        refreshDisplays(fromActiveDisplays: Self.getActiveDisplays())
+        refreshDisplays()
     }
 
-    func refreshDisplays(fromActiveDisplays activeDisplays: Set<CGDirectDisplayID>) {
+    func applicationDidChangeScreenParameters(_ notification: Notification) {
+        if displayReconfigurationCounter == 0 {
+            refreshDisplays()
+        }
+    }
+
+    func refreshDisplays() {
         os_log("Starting display refresh...")
+
+        let activeDisplays = Self.getActiveDisplays()
         os_log("Displays: %{public}@", activeDisplays)
 
         let isOnConsole = (CGSessionCopyCurrentDictionary() as NSDictionary?)?[kCGSessionOnConsoleKey] as? Bool ?? false
