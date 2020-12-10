@@ -32,7 +32,5 @@ _However_ it will automatically stop the polling when no UltraFine displays are 
 If you want to change this behavior, the update interval is exposed as an internal user preference `BSUpdateInterval`. It can be set via the terminal: 
 `$ defaults write dev.vandijk.Brightness-Sync BSUpdateInterval 0.5` where 0.5 is the desired delay in seconds. The app must be restarted for the change to take effect.
 
-
-
 ## 2nd Gen UltraFine support
 This app was designed with 1st generation UltraFines in mind that don't support auto brightness. I started work on supporting mixed setups with both 1st gen and 2nd gen displays in v2.3.0. If no built-in display is detected, it will use a 2nd gen display as the "source" and sync its brightness to all other connected displays. The app will currently override the auto brightness of all 2nd gen displays that aren't used as the source, because some people have reported the auto brightness of the 2nd gen to not be so reliable and are using this app to sync the brightness of the built-in display to the 2nd gen. You should probably turn off the built-in auto brightness of the 2nd gen in the Settings if you do this. Other people might want to only sync to 1st gen and let the 2nd gen handle its own auto brightness. I'm considering making this an option for those people.
