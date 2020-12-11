@@ -29,7 +29,7 @@ Requires macOS 10.15. If you're on 10.14, you can download v1 from the releases 
 The app polls the brightness pretty aggressively (every 0.1 seconds), which results in a small energy impact of around 0.3-0.5 according to Activity Monitor.
 _However_ it will automatically stop the polling when no UltraFine displays are connected and because those monitors are also a power source, this effectively means it will never run when on battery power.
 
-If you want to change this behavior, the update interval is exposed as an internal user preference `BSUpdateInterval`. It can be set via the terminal: 
+If you want to change the default update interval, it is exposed as an internal user preference `BSUpdateInterval`. It can be set via the terminal: 
 `$ defaults write dev.vandijk.Brightness-Sync BSUpdateInterval 0.5` where 0.5 is the desired delay in seconds. The app must be restarted for the change to take effect.
 
 ## 2nd Gen UltraFine support
