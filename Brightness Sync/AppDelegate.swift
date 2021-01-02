@@ -16,7 +16,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         if let button = statusItem.button {
-            button.image = #imageLiteral(resourceName: "StatusBarButtonImage")
+            if #available(macOS 11.0, *) {
+                button.image = NSImage(named: "MenuBarIcon")
+            } else {
+                button.image = NSImage(named: "MenuBarIconOld")
+            }
         }
 
         let menu = NSMenu()
