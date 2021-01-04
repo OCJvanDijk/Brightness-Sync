@@ -3,7 +3,7 @@
 ___Notice: This app is currently incompatible with Apple Silicon Macs. I don't have access to one, so I probably won't be able to fix it. Help would be appreciated. ([Issue #24](https://github.com/OCJvanDijk/Brightness-Sync/issues/24))___
 
 __Download:__ [here](https://github.com/OCJvanDijk/Brightness-Sync/releases/latest/download/Brightness.Sync.app.zip) (macOS Catalina required, app is signed and notarized)  
-Alternatively, you can use [Homebrew Cask](https://github.com/Homebrew/homebrew-cask): `$ brew cask install brightness-sync`
+Alternatively, you can use [Homebrew Cask](https://github.com/Homebrew/homebrew-cask): `$ brew install --cask brightness-sync`
 
 _The app doesn't automatically check for updates. If you want to stay up-to-date, I recommend selecting "Watch->Releases only" at the top of this page if you have a GitHub account, or using the Homebrew Cask installation method._
 
