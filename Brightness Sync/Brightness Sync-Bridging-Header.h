@@ -12,3 +12,6 @@ void CoreDisplay_Display_SetDynamicLinearBrightness(CGDirectDisplayID display, d
 void CoreDisplay_Display_SetLinearBrightness(CGDirectDisplayID display, double brightness);
 
 CFDictionaryRef CoreDisplay_DisplayCreateInfoDictionary(CGDirectDisplayID);
+
+int DisplayServicesGetLinearBrightness(int display, float *brightness);
+int DisplayServicesSetLinearBrightness(int display, float brightness);

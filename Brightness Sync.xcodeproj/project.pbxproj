@@ -14,6 +14,7 @@
 		922F72A624339D8300AF6830 /* BrightnessSyncLauncher.app in CopyFiles */ = {isa = PBXBuildFile; fileRef = 922F729224339AD700AF6830 /* BrightnessSyncLauncher.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		927DF28E2292E6DE00C9C85F /* CoreDisplay.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 922D19AD2291CD4300DBF67D /* CoreDisplay.framework */; };
 		929E03D02433A5C300A272DE /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929E03CF2433A5C300A272DE /* main.swift */; };
+		92A69DEC25E3BBEC00F68C1F /* DisplayServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 92A69DEB25E3BBEC00F68C1F /* DisplayServices.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -42,6 +43,7 @@
 		922F72A024339AD800AF6830 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		922F72A124339AD800AF6830 /* BrightnessSyncLauncher.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BrightnessSyncLauncher.entitlements; sourceTree = "<group>"; };
 		929E03CF2433A5C300A272DE /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		92A69DEB25E3BBEC00F68C1F /* DisplayServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DisplayServices.framework; path = /System/Library/PrivateFrameworks/DisplayServices.framework; sourceTree = "<absolute>"; };
 		92B83E1622A968DF0009570E /* Brightness Sync.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Brightness Sync.entitlements"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -51,6 +53,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				927DF28E2292E6DE00C9C85F /* CoreDisplay.framework in Frameworks */,
+				92A69DEC25E3BBEC00F68C1F /* DisplayServices.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,6 +103,7 @@
 		922D19AC2291CD4300DBF67D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				92A69DEB25E3BBEC00F68C1F /* DisplayServices.framework */,
 				922D19AD2291CD4300DBF67D /* CoreDisplay.framework */,
 			);
 			name = Frameworks;
@@ -364,7 +368,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2.3.2;
+				CURRENT_PROJECT_VERSION = "2.3.2-custom.1";
 				DEVELOPMENT_TEAM = 7M6D294GQ9;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "Brightness Sync/Info.plist";
@@ -372,13 +376,17 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 2.3.2;
+				MARKETING_VERSION = "2.3.2-custom.1";
 				PRODUCT_BUNDLE_IDENTIFIER = "dev.vandijk.Brightness-Sync";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "Brightness Sync/Brightness Sync-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
+				SYSTEM_FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+				);
 			};
 			name = Debug;
 		};
@@ -390,7 +398,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2.3.2;
+				CURRENT_PROJECT_VERSION = "2.3.2-custom.1";
 				DEVELOPMENT_TEAM = 7M6D294GQ9;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "Brightness Sync/Info.plist";
@@ -398,12 +406,16 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 2.3.2;
+				MARKETING_VERSION = "2.3.2-custom.1";
 				PRODUCT_BUNDLE_IDENTIFIER = "dev.vandijk.Brightness-Sync";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OBJC_BRIDGING_HEADER = "Brightness Sync/Brightness Sync-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
+				SYSTEM_FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+				);
 			};
 			name = Release;
 		};

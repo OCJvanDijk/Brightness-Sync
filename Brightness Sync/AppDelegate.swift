@@ -155,11 +155,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                         .autoconnect()
                         .map { _ in
                             .running(
-                                sourceBrightness: CoreDisplay_Display_GetLinearBrightness(CGDisplayGetDisplayIDFromUUID(source)),
+                                sourceBrightness: getLinearBrightness(CGDisplayGetDisplayIDFromUUID(source)),
                                 targets: displays.targets.map {
                                     .init(
                                         id: $0,
-                                        brightness: CoreDisplay_Display_GetLinearBrightness(CGDisplayGetDisplayIDFromUUID($0)),
+                                        brightness: getLinearBrightness(CGDisplayGetDisplayIDFromUUID($0)),
                                         offset: monitorOffsets[$0]
                                     )
                                 }
@@ -217,7 +217,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .merge(with: rollbackInjector)
             .sink { [monitorOffsets] targets in
                 for target in targets {
-                    CoreDisplay_Display_SetLinearBrightness(CGDisplayGetDisplayIDFromUUID(target.id), target.brightness)
+                    setLinearBrightness(CGDisplayGetDisplayIDFromUUID(target.id), target.brightness)
                     monitorOffsets[target.id] = target.offset
                 }
             }
@@ -371,6 +371,16 @@ class MonitorOffsets: ObservableObject {
             UserDefaults.standard.set(newValue, forKey: "BSBrightnessOffset_\(CFUUIDCreateString(nil, monitor)!)")
         }
     }
+}
+
+func getLinearBrightness(_ display: CGDirectDisplayID) -> Double {
+    var brightness: Float = 0.0
+    DisplayServicesGetLinearBrightness(Int32(display), &brightness)
+    return Double(brightness)
+}
+
+func setLinearBrightness(_ display: CGDirectDisplayID, _ brightness: Double) {
+    DisplayServicesSetLinearBrightness(Int32(display), Float(brightness))
 }
 
 func estimatedLinearToUserBrightness(_ brightness: Double) -> Double {
