@@ -124,13 +124,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     enum Status: Equatable {
         case deactivated
         case paused
-        case running(sourceBrightness: Double, targets: [Target])
+        case running(sourceBrightness: Float, targets: [Target])
     }
 
     struct Target: Equatable {
         let id: CFUUID
-        let brightness: Double
-        let offset: Double
+        let brightness: Float
+        let offset: Float
     }
 
     var cancelBag = Set<AnyCancellable>()
@@ -362,9 +362,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 class MonitorOffsets: ObservableObject {
-    subscript(monitor: CFUUID) -> Double {
+    subscript(monitor: CFUUID) -> Float {
         get {
-            UserDefaults.standard.double(forKey: "BSBrightnessOffset_\(CFUUIDCreateString(nil, monitor)!)")
+            UserDefaults.standard.float(forKey: "BSBrightnessOffset_\(CFUUIDCreateString(nil, monitor)!)")
         }
         set {
             objectWillChange.send()
@@ -373,21 +373,21 @@ class MonitorOffsets: ObservableObject {
     }
 }
 
-func getLinearBrightness(_ display: CGDirectDisplayID) -> Double {
-    var brightness: Float = 0.0
-    DisplayServicesGetLinearBrightness(Int32(display), &brightness)
-    return Double(brightness)
+func getLinearBrightness(_ display: CGDirectDisplayID) -> Float {
+    var brightness: Float = 0
+    DisplayServicesGetLinearBrightness(display, &brightness)
+    return brightness
 }
 
-func setLinearBrightness(_ display: CGDirectDisplayID, _ brightness: Double) {
-    DisplayServicesSetLinearBrightness(Int32(display), Float(brightness))
+func setLinearBrightness(_ display: CGDirectDisplayID, _ brightness: Float) {
+    DisplayServicesSetLinearBrightness(display, brightness)
 }
 
-func estimatedLinearToUserBrightness(_ brightness: Double) -> Double {
+func estimatedLinearToUserBrightness(_ brightness: Float) -> Float {
     log(brightness / 0.0079) / 4.6533
 }
 
-func estimatedUserToLinearBrightness(_ brightness: Double) -> Double {
+func estimatedUserToLinearBrightness(_ brightness: Float) -> Float {
     exp(brightness * 4.6533) * 0.0079
 }
 
