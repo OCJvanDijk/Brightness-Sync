@@ -5,7 +5,7 @@ ___Apple Silicon users:__ Download the [beta](https://github.com/OCJvanDijk/Brig
 __Download:__ [here](https://github.com/OCJvanDijk/Brightness-Sync/releases/latest/download/Brightness.Sync.app.zip) (macOS Catalina required, app is signed and notarized)  
 Alternatively, you can use [Homebrew Cask](https://github.com/Homebrew/homebrew-cask): `$ brew install --cask brightness-sync`
 
-_The app doesn't automatically check for updates. If you want to stay up-to-date, I recommend selecting "Watch->Releases only" at the top of this page if you have a GitHub account, or using the Homebrew Cask installation method._
+_The app doesn't automatically check for updates. If you want to stay up-to-date, I recommend selecting "Watch->Custom->Releases" at the top of this page if you have a GitHub account, or using the Homebrew Cask installation method._
 
 ## Compatibility
 This app is only compatible with the LG UltraFine monitors developed for Mac in cooperation with Apple, specifically:
